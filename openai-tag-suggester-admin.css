@@ -1,0 +1,62 @@
+#openai_tag_suggester_container {
+    padding: 10px 0;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 15px;
+}
+
+#openai_tag_suggester_button {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+#openai_tag_suggester_results {
+    margin-top: 10px;
+    min-height: 30px;
+}
+
+.tag-controls {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.tag-controls button {
+    flex: 1;
+}
+
+.tag-suggestion {
+    margin: 5px 0;
+}
+
+.tag-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+}
+
+.suggested-tags {
+    margin: 10px 0;
+}
+
+#add_selected_tags {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.notice {
+    padding: 8px;
+    margin: 8px 0;
+    border-left: 4px solid #00a32a;
+    background: #fff;
+}
+
+.notice-success {
+    border-color: #00a32a;
+}
+
+.notice-error {
+    border-color: #dc3232;
+}
