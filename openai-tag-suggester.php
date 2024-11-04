@@ -139,12 +139,11 @@ function openai_tag_suggester_get_tags($content, $api_key) {
         'messages' => array(
             array(
                 'role' => 'system',
-                'content' => 'You are a university communications specialist. You are tasked with suggesting tags for faculty profiles that highlight their research interests. These tags should capture each faculty persons unique research interests while at the same time being relevant to the university\'s mission and goals and connect with other faculty who have similar research interests. Respond only with comma-separated tags, no other text.'
                 'content' => $system_role
             ),
             array(
                 'role' => 'user',
-                'content' => "Suggest 3-15 tags for the following faculty profile: $cleaned_content. There should NOT be any tag suggestions for places, for position titles, or for names of people."
+                'content' => $user_role . ": $cleaned_content"
             )
         ),
         'temperature' => 0.7,
