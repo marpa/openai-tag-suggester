@@ -38,6 +38,7 @@ function openai_tag_suggester_settings_page() {
 
 add_action('admin_init', 'openai_tag_suggester_settings');
 function openai_tag_suggester_settings() {
+    // API Key setting
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_api_key');
     
     // System Role setting
