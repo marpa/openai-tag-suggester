@@ -23,6 +23,15 @@ function openai_tag_suggester_settings_page() {
             submit_button();
             ?>
         </form>
+        <div class="prompt-help">
+            <h2>Help</h2>
+            <p>The System Role and User Role prompts are used to guide the AI in generating tags.</p>
+            <h3>Default Values:</h3>
+            <h4>System Role:</h4>
+            <pre><?php echo esc_html(get_option('openai_tag_suggester_system_role')); ?></pre>
+            <h4>User Role:</h4>
+            <pre><?php echo esc_html(get_option('openai_tag_suggester_user_role')); ?></pre>
+        </div>
     </div>
     <?php
 }
@@ -32,6 +41,49 @@ function openai_tag_suggester_settings() {
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_api_key');
     add_settings_section('openai_tag_suggester_main', 'Main Settings', null, 'openai_tag_suggester');
     add_settings_field('openai_tag_suggester_api_key', 'OpenAI API Key', 'openai_tag_suggester_api_key_field', 'openai_tag_suggester', 'openai_tag_suggester_main');
+    
+    // System Role setting
+    register_setting('openai_tag_suggester_options', 'openai_tag_suggester_system_role', array(
+        'default' => 'You are a taxonomy specialist. You are tasked with suggesting tags for posts. Respond only with comma-separated tags, no other text.'
+    ));
+    
+    // User Role setting
+    register_setting('openai_tag_suggester_options', 'openai_tag_suggester_user_role', array(
+        'default' => 'Suggest 3-15 tags for this post. There should NOT be any tag suggestions for places, for position titles, or for names of people.'
+    ));
+
+    // Add settings section
+    add_settings_section(
+        'openai_tag_suggester_main',
+        'Main Settings',
+        null,
+        'openai_tag_suggester'
+    );
+
+    // Add settings fields
+    add_settings_field(
+        'openai_tag_suggester_api_key',
+        'OpenAI API Key',
+        'openai_tag_suggester_api_key_field',
+        'openai_tag_suggester',
+        'openai_tag_suggester_main'
+    );
+
+    add_settings_field(
+        'openai_tag_suggester_system_role',
+        'System Role Prompt',
+        'openai_tag_suggester_system_role_field',
+        'openai_tag_suggester',
+        'openai_tag_suggester_main'
+    );
+
+    add_settings_field(
+        'openai_tag_suggester_user_role',
+        'User Role Prompt',
+        'openai_tag_suggester_user_role_field',
+        'openai_tag_suggester',
+        'openai_tag_suggester_main'
+    );
 }
 
 function openai_tag_suggester_api_key_field() {
