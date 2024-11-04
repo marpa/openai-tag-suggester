@@ -39,8 +39,6 @@ function openai_tag_suggester_settings_page() {
 add_action('admin_init', 'openai_tag_suggester_settings');
 function openai_tag_suggester_settings() {
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_api_key');
-    add_settings_section('openai_tag_suggester_main', 'Main Settings', null, 'openai_tag_suggester');
-    add_settings_field('openai_tag_suggester_api_key', 'OpenAI API Key', 'openai_tag_suggester_api_key_field', 'openai_tag_suggester', 'openai_tag_suggester_main');
     
     // System Role setting
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_system_role', array(
@@ -88,7 +86,17 @@ function openai_tag_suggester_settings() {
 
 function openai_tag_suggester_api_key_field() {
     $api_key = get_option('openai_tag_suggester_api_key');
-    echo "<input type='text' name='openai_tag_suggester_api_key' value='$api_key' />";
+    echo "<input type='text' size='50' name='openai_tag_suggester_api_key' value='" . esc_attr($api_key) . "' />";
+}
+
+function openai_tag_suggester_system_role_field() {
+    $system_role = get_option('openai_tag_suggester_system_role');
+    echo "<textarea name='openai_tag_suggester_system_role' rows='4' cols='50'>" . esc_textarea($system_role) . "</textarea>";
+}
+
+function openai_tag_suggester_user_role_field() {
+    $user_role = get_option('openai_tag_suggester_user_role');
+    echo "<textarea name='openai_tag_suggester_user_role' rows='4' cols='50'>" . esc_textarea($user_role) . "</textarea>";
 }
 
 // Hook into post save
@@ -122,12 +130,17 @@ function openai_tag_suggester_get_tags($content, $api_key) {
     $cleaned_content = wp_strip_all_tags($content);
     $cleaned_content = substr($cleaned_content, 0, 2000);
     
+    // Get custom prompts from settings
+    $system_role = get_option('openai_tag_suggester_system_role');
+    $user_role = get_option('openai_tag_suggester_user_role');
+    
     $data = array(
         'model' => 'gpt-3.5-turbo',
         'messages' => array(
             array(
                 'role' => 'system',
                 'content' => 'You are a university communications specialist. You are tasked with suggesting tags for faculty profiles that highlight their research interests. These tags should capture each faculty persons unique research interests while at the same time being relevant to the university\'s mission and goals and connect with other faculty who have similar research interests. Respond only with comma-separated tags, no other text.'
+                'content' => $system_role
             ),
             array(
                 'role' => 'user',
