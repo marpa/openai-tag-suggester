@@ -4,9 +4,12 @@
     margin-bottom: 15px;
 }
 
-#openai_tag_suggester_button {
+/* Set a consistent width for all main buttons */
+#openai_tag_suggester_button,
+.add-selected-tags {
     width: 100%;
     margin-bottom: 10px;
+    display: block;  /* Ensures full width */
 }
 
 #openai_tag_suggester_results {
@@ -14,14 +17,21 @@
     min-height: 30px;
 }
 
+/* Control buttons container */
 .tag-controls {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     display: flex;
     gap: 10px;
 }
 
+/* Select All/None buttons */
 .tag-controls button {
     flex: 1;
+}
+
+/* First Add Selected Tags button */
+.tag-controls + .add-selected-tags {
+    margin-bottom: 15px;
 }
 
 .tag-suggestion {
@@ -41,8 +51,8 @@
     margin: 10px 0;
 }
 
-#add_selected_tags {
-    width: 100%;
+/* Second Add Selected Tags button */
+.tag-list + .add-selected-tags {
     margin-top: 10px;
 }
 
@@ -59,4 +69,31 @@
 
 .notice-error {
     border-color: #dc3232;
+}
+
+/* Add these styles for the settings page */
+.prompt-help {
+    margin-top: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.prompt-help h2 {
+    margin-top: 0;
+}
+
+.prompt-help pre {
+    background: #f5f5f5;
+    padding: 10px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.form-table textarea {
+    font-family: monospace;
+    width: 100%;
+    max-width: 800px;
 }

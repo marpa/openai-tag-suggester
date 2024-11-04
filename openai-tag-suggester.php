@@ -3,7 +3,7 @@
 Plugin Name: OpenAI Tag Suggester
 Description: Suggests tags for posts using the OpenAI API.
 Version: 1.0
-Author: Your Name
+Author: Alex Chapin
 */
 
 // Add settings page

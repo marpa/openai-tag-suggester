@@ -17,12 +17,12 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     const tags = response.data;
-                    // Add select all/none controls
                     const controlsHtml = `
                         <div class="tag-controls">
                             <button type="button" class="button button-secondary select-all-tags">Select All</button>
                             <button type="button" class="button button-secondary select-none-tags">Select None</button>
                         </div>
+                        <button class="button button-secondary add-selected-tags">Add Selected Tags</button>
                     `;
                     
                     const tagHtml = tags.map(tag => `
@@ -39,29 +39,26 @@ jQuery(document).ready(function($) {
                             <div class="tag-list">
                                 ${tagHtml}
                             </div>
-                            <button id="add_selected_tags" class="button button-secondary">Add Selected Tags</button>
+                            <button class="button button-secondary add-selected-tags">Add Selected Tags</button>
                         </div>
                     `);
 
-                    // Handle select all
-                    $('.select-all-tags').on('click', function() {
+                    // Use .on() instead of shorthand methods
+                    $(document).on('click', '.select-all-tags', function() {
                         $('.tag-checkbox').prop('checked', true);
                     });
 
-                    // Handle select none
-                    $('.select-none-tags').on('click', function() {
+                    $(document).on('click', '.select-none-tags', function() {
                         $('.tag-checkbox').prop('checked', false);
                     });
 
-                    // Handle adding selected tags
-                    $('#add_selected_tags').on('click', function() {
+                    $(document).on('click', '.add-selected-tags', function() {
                         const selectedTags = [];
                         $('.tag-checkbox:checked').each(function() {
                             selectedTags.push($(this).val());
                         });
                         
                         if (selectedTags.length > 0) {
-                            // Save tags via AJAX
                             $.ajax({
                                 url: openaiTagSuggester.ajax_url,
                                 type: 'POST',
@@ -99,8 +96,8 @@ jQuery(document).ready(function($) {
         generateTags();
     }
 
-    // Generate tags when button is clicked
-    $('#openai_tag_suggester_button').on('click', function(e) {
+    // Use .on() for event binding
+    $(document).on('click', '#openai_tag_suggester_button', function(e) {
         e.preventDefault();
         generateTags();
     });
