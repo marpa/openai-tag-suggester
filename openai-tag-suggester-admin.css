@@ -97,3 +97,46 @@
     width: 100%;
     max-width: 800px;
 }
+
+/* Add these styles to your existing CSS */
+#openai_tag_suggester_taxonomy {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.existing-tag {
+    opacity: 0.7;
+}
+
+.existing-tag-label {
+    font-size: 0.8em;
+    color: #666;
+    font-style: italic;
+    margin-left: 5px;
+}
+
+/* Update these existing styles */
+#openai_tag_suggester_button,
+.add-selected-tags {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+/* Add these styles for the settings page */
+.taxonomy-checkboxes {
+    margin: 10px 0;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.taxonomy-checkbox-label {
+    display: block;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.taxonomy-checkbox-label input[type="checkbox"] {
+    margin-right: 8px;
+}
