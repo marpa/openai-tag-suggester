@@ -13,6 +13,14 @@ function openai_tag_suggester_menu() {
 }
 
 function openai_tag_suggester_settings_page() {
+    // Debug output
+    echo '<div class="debug-info" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">';
+    echo '<h3>Debug Information</h3>';
+    echo '<pre>';
+    echo 'Enabled Taxonomies: ' . print_r(get_option('openai_tag_suggester_enabled_taxonomies'), true) . "\n";
+    echo 'Available Taxonomies: ' . print_r(openai_tag_suggester_get_available_taxonomies(), true) . "\n";
+    echo '</pre>';
+    echo '</div>';
     ?>
     <div class="wrap">
         <h1>OpenAI Tag Suggester Settings</h1>
@@ -23,15 +31,6 @@ function openai_tag_suggester_settings_page() {
             submit_button();
             ?>
         </form>
-        <div class="prompt-help">
-            <h2>Help</h2>
-            <p>The System Role and User Role prompts are used to guide the AI in generating tags.</p>
-            <h3>Default Values:</h3>
-            <h4>System Role:</h4>
-            <pre><?php echo esc_html(get_option('openai_tag_suggester_system_role')); ?></pre>
-            <h4>User Role:</h4>
-            <pre><?php echo esc_html(get_option('openai_tag_suggester_user_role')); ?></pre>
-        </div>
     </div>
     <?php
 }
@@ -43,19 +42,37 @@ function openai_tag_suggester_settings() {
     
     // System Role setting
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_system_role', array(
-        'default' => 'You are a taxonomy specialist. You are tasked with suggesting tags for posts. Respond only with comma-separated tags, no other text.'
+        'default' => 'You are a university communications specialist. You are tasked with suggesting tags for faculty profiles that highlight their research interests.'
     ));
     
     // User Role setting
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_user_role', array(
-        'default' => 'Suggest 3-15 tags for this post. There should NOT be any tag suggestions for places, for position titles, or for names of people.'
+        'default' => 'Suggest 3-15 tags for the following faculty profile. There should NOT be any tag suggestions for places, for position titles, or for names of people.'
     ));
 
-    // Add settings section
+    // Enabled Taxonomies setting
+    register_setting(
+        'openai_tag_suggester_options', 
+        'openai_tag_suggester_enabled_taxonomies',
+        array(
+            'type' => 'array',
+            'default' => array('post_tag'),
+            'sanitize_callback' => 'openai_tag_suggester_sanitize_taxonomies'
+        )
+    );
+
+    // Add settings sections
     add_settings_section(
         'openai_tag_suggester_main',
         'Main Settings',
         null,
+        'openai_tag_suggester'
+    );
+
+    add_settings_section(
+        'openai_tag_suggester_taxonomies',
+        'Taxonomy Settings',
+        'openai_tag_suggester_taxonomies_section_callback',
         'openai_tag_suggester'
     );
 
@@ -83,6 +100,44 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester',
         'openai_tag_suggester_main'
     );
+
+    add_settings_field(
+        'openai_tag_suggester_enabled_taxonomies',
+        'Enabled Taxonomies',
+        'openai_tag_suggester_enabled_taxonomies_field',
+        'openai_tag_suggester',
+        'openai_tag_suggester_taxonomies'
+    );
+}
+
+// Add section description callback
+function openai_tag_suggester_taxonomies_section_callback() {
+    echo '<p>Select which taxonomies should be available for tag suggestions.</p>';
+}
+
+// Add taxonomy field renderer
+function openai_tag_suggester_enabled_taxonomies_field() {
+    $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
+    $available_taxonomies = openai_tag_suggester_get_available_taxonomies();
+    
+    echo '<div class="taxonomy-checkboxes">';
+    foreach ($available_taxonomies as $tax_name => $tax_label) {
+        $checked = in_array($tax_name, $enabled_taxonomies) ? 'checked' : '';
+        echo '<label class="taxonomy-checkbox-label">';
+        echo '<input type="checkbox" name="openai_tag_suggester_enabled_taxonomies[]" ';
+        echo 'value="' . esc_attr($tax_name) . '" ' . $checked . '> ';
+        echo esc_html($tax_label) . ' (' . esc_html($tax_name) . ')';
+        echo '</label><br>';
+    }
+    echo '</div>';
+    
+    // Add debug output
+    echo '<div class="taxonomy-debug">';
+    echo '<pre>';
+    echo 'Current enabled taxonomies: ' . print_r($enabled_taxonomies, true) . "\n";
+    echo 'Available taxonomies: ' . print_r($available_taxonomies, true);
+    echo '</pre>';
+    echo '</div>';
 }
 
 function openai_tag_suggester_api_key_field() {
@@ -125,7 +180,7 @@ function openai_tag_suggester_generate_tags($post_id, $post) {
     }
 }
 
-function openai_tag_suggester_get_tags($content, $api_key) {
+function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
     $url = 'https://api.openai.com/v1/chat/completions';
     
     $cleaned_content = wp_strip_all_tags($content);
@@ -134,6 +189,14 @@ function openai_tag_suggester_get_tags($content, $api_key) {
     // Get custom prompts from settings
     $system_role = get_option('openai_tag_suggester_system_role');
     $user_role = get_option('openai_tag_suggester_user_role');
+    
+    // Modify prompt based on taxonomy
+    $taxonomy_label = openai_tag_suggester_get_available_taxonomies()[$taxonomy];
+    $user_role .= " Generate {$taxonomy_label}.";
+    
+    if ($taxonomy === 'hashtag') {
+        $user_role .= " Include the # symbol with each suggestion.";
+    }
     
     $data = array(
         'model' => 'gpt-3.5-turbo',
@@ -148,7 +211,7 @@ function openai_tag_suggester_get_tags($content, $api_key) {
             )
         ),
         'temperature' => 0.7,
-        'max_tokens' => 100
+        'max_tokens' => 150
     );
 
     $args = array(
@@ -178,41 +241,171 @@ function openai_tag_suggester_get_tags($content, $api_key) {
     return [];
 }
 
-// Add meta box to edit post page
+// Add meta box to post editor screen
 add_action('add_meta_boxes', 'openai_tag_suggester_add_meta_box');
 function openai_tag_suggester_add_meta_box() {
+    // Add our meta box AFTER the default tags box
     add_meta_box(
         'openai_tag_suggester_meta_box',
-        'Tag Suggestions',
+        'AI Tag Suggestions',
         'openai_tag_suggester_meta_box_callback',
         'post',
-        'side'
+        'side',
+        'low'  // Ensures it appears below the default tags box
     );
 }
 
 function openai_tag_suggester_meta_box_callback($post) {
-    echo '<div id="openai_tag_suggester_meta_box">';
-    echo '<button id="openai_tag_suggester_button" class="button button-primary">Generate Tag Suggestions</button>';
+    wp_nonce_field('openai_tag_suggester_nonce', 'openai_tag_suggester_nonce');
+    
+    echo '<div id="openai_tag_suggester_container" class="ai-tag-suggester">';
+    
+    // Instructions for users
+    echo '<p class="howto">Generate AI-powered tag suggestions based on your content.</p>';
+    
+    // Taxonomy selector
+    $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
+    echo '<div class="taxonomy-selector" style="margin-bottom: 10px;">';
+    echo '<label for="openai_tag_suggester_taxonomy" class="howto">Select taxonomy:</label>';
+    echo '<select id="openai_tag_suggester_taxonomy" name="openai_tag_suggester_taxonomy" class="widefat">';
+    foreach (openai_tag_suggester_get_available_taxonomies() as $tax_name => $tax_label) {
+        if (in_array($tax_name, $enabled_taxonomies)) {
+            $selected = ($tax_name === 'post_tag') ? 'selected' : '';
+            echo '<option value="' . esc_attr($tax_name) . '" ' . $selected . '>' . 
+                 esc_html($tax_label) . '</option>';
+        }
+    }
+    echo '</select>';
+    echo '</div>';
+    
+    // Generate button
+    echo '<button type="button" id="openai_tag_suggester_button" name="openai_tag_suggester_button" ';
+    echo 'class="button button-primary" style="width: 100%; margin-bottom: 10px;">';
+    echo 'Generate Tag Suggestions</button>';
+    
+    // Results area
     echo '<div id="openai_tag_suggester_results"></div>';
+    
     echo '</div>';
 }
 
+// Add custom styling to separate the UIs
+add_action('admin_head', function() {
+    ?>
+    <style>
+        /* Style the AI Tag Suggester box */
+        #openai_tag_suggester_meta_box {
+            margin-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .ai-tag-suggester .tag-suggestion {
+            margin: 5px 0;
+            padding: 3px 0;
+        }
+        
+        .ai-tag-suggester .tag-controls {
+            margin: 10px 0;
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap; /* Allow buttons to wrap on narrow screens */
+        }
+        
+        .ai-tag-suggester .tag-controls .button {
+            flex: 0 1 auto; /* Allow buttons to shrink but not grow */
+        }
+        
+        .ai-tag-suggester .tag-controls .add-selected-tags {
+            margin-left: auto; /* Push the Add Selected Tags button to the right */
+        }
+        
+        .ai-tag-suggester .tag-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+            padding: 5px;
+            border: 1px solid #ddd;
+            background: #fff;
+        }
+        
+        .ai-tag-suggester .existing-tag {
+            opacity: 0.7;
+        }
+        
+        .ai-tag-suggester .existing-tag-label {
+            color: #666;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+        
+        .ai-tag-suggester .notice {
+            margin: 10px 0;
+            padding: 5px 10px;
+        }
+        
+        .ai-tag-suggester .notice-success {
+            border-left: 4px solid #46b450;
+        }
+        
+        .ai-tag-suggester .notice-error {
+            border-left: 4px solid #dc3232;
+        }
+        
+        .ai-tag-suggester .taxonomy-selector {
+            margin-bottom: 15px;
+        }
+        
+        .ai-tag-suggester .taxonomy-selector label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .ai-tag-suggester .taxonomy-selector select {
+            width: 100%;
+            max-width: 100%;
+        }
+        
+        .ai-tag-suggester .add-selected-tags:last-child {
+            width: 100%; /* Make the bottom button full width */
+            margin-top: 10px;
+        }
+    </style>
+    <?php
+});
+
+// Remove any old hooks
+remove_action('post_tag_add_form_fields', 'openai_tag_suggester_inject_ui', 1);
+remove_action('hashtag_add_form_fields', 'openai_tag_suggester_inject_ui', 1);
+
 /**
- * Inject our Tag Suggester UI into the Tags meta box
- * The 'post_tag_add_form_fields' hook adds content at the top of the Tags meta box
+ * Register the UI injection for each enabled taxonomy
  */
-add_action('post_tag_add_form_fields', 'openai_tag_suggester_inject_ui', 1);
-function openai_tag_suggester_inject_ui() {
-    // Create a container for our UI with loading state
-    echo '<div id="openai_tag_suggester_container" style="margin-bottom: 15px;">';
+function openai_tag_suggester_register_taxonomy_hooks() {
+    $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
     
-    // Add the "Generate Tag Suggestions" button
-    echo '<button id="openai_tag_suggester_button" class="button button-primary">Regenerate Tag Suggestions</button>';
+    error_log('=== Tag Suggester Hook Registration ===');
+    error_log('Registering hooks for taxonomies: ' . print_r($enabled_taxonomies, true));
     
-    // Add a container for displaying results with initial loading message
-    echo '<div id="openai_tag_suggester_results">Loading tag suggestions...</div>';
-    
-    echo '</div>';
+    foreach ($enabled_taxonomies as $taxonomy) {
+        error_log('Adding hooks for taxonomy: ' . $taxonomy);
+        
+        // Add to the taxonomy meta box in post editor
+        add_action('add_meta_boxes', function() use ($taxonomy) {
+            add_meta_box(
+                'openai_tag_suggester_' . $taxonomy,
+                'Tag Suggestions for ' . ucfirst($taxonomy),
+                'openai_tag_suggester_inject_ui',
+                'post',
+                'side',
+                'high'
+            );
+        });
+        
+        // Add to the taxonomy page
+        add_action($taxonomy . '_add_form_fields', 'openai_tag_suggester_inject_ui', 1);
+        add_action($taxonomy . '_edit_form_fields', 'openai_tag_suggester_inject_ui', 1);
+    }
 }
 
 /**
@@ -256,31 +449,70 @@ function openai_tag_suggester_enqueue_admin_scripts($hook) {
 // Handle AJAX request to generate tag suggestions
 add_action('wp_ajax_openai_tag_suggester_generate_tags', 'openai_tag_suggester_generate_tags_ajax');
 function openai_tag_suggester_generate_tags_ajax() {
+    // Prevent any output before our JSON response
+    if (ob_get_level()) ob_clean();
+    
+    // Verify nonce
     check_ajax_referer('openai_tag_suggester_nonce', 'nonce');
 
-    $post_id = intval($_POST['post_id']);
-    $post = get_post($post_id);
-
-    if ($post->post_type != 'post' || wp_is_post_revision($post_id)) {
-        error_log('Invalid post type or revision.');
-        wp_send_json_error('Invalid post type or revision.');
+    // Debug logging (to file, not output)
+    error_log('=== Tag Suggester AJAX Request ===');
+    error_log('POST data: ' . print_r($_POST, true));
+    
+    if (!isset($_POST['taxonomy'])) {
+        wp_send_json_error('No taxonomy specified in request');
+        return;
     }
 
+    $taxonomy = sanitize_text_field($_POST['taxonomy']);
+    $post_id = intval($_POST['post_id']);
+    
+    error_log('Processing request for taxonomy: ' . $taxonomy);
+    error_log('Post ID: ' . $post_id);
+    
+    // Validate taxonomy
+    $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
+    if (!in_array($taxonomy, $enabled_taxonomies)) {
+        wp_send_json_error('Invalid taxonomy: ' . $taxonomy);
+        return;
+    }
+
+    // Get post content
+    $post = get_post($post_id);
+    if (!$post) {
+        wp_send_json_error('Invalid post ID');
+        return;
+    }
+
+    // Get API key
     $api_key = get_option('openai_tag_suggester_api_key');
     if (!$api_key) {
-        error_log('API key not set.');
-        wp_send_json_error('API key not set.');
+        wp_send_json_error('API key not set');
+        return;
     }
 
-    $post_content = $post->post_content;
-    $tags = openai_tag_suggester_get_tags($post_content, $api_key);
-
-    if ($tags) {
-        wp_send_json_success($tags);
-    } else {
-        error_log('No tag suggestions available.');
-        wp_send_json_error('No tag suggestions available.');
+    try {
+        // Make sure we don't have any output before sending JSON
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        $tags = openai_tag_suggester_get_tags($post->post_content, $api_key, $taxonomy);
+        if ($tags) {
+            wp_send_json_success(array(
+                'suggested' => $tags,
+                'existing' => wp_get_object_terms($post_id, $taxonomy, array('fields' => 'names'))
+            ));
+        } else {
+            wp_send_json_error('No tag suggestions available');
+        }
+    } catch (Exception $e) {
+        error_log('Tag generation error: ' . $e->getMessage());
+        wp_send_json_error('Error generating tags: ' . $e->getMessage());
     }
+    
+    // Make sure we exit
+    wp_die();
 }
 
 // Add this with your other action hooks
@@ -307,34 +539,148 @@ function openai_tag_suggester_save_tags($post_id, $post) {
 // Add new AJAX handler for saving tags
 add_action('wp_ajax_openai_tag_suggester_save_tags', 'openai_tag_suggester_save_tags_ajax');
 function openai_tag_suggester_save_tags_ajax() {
-    // Verify nonce
-    check_ajax_referer('openai_tag_suggester_nonce', 'nonce');
-
-    // Get post ID and tags
-    $post_id = intval($_POST['post_id']);
-    $tags = $_POST['tags'];
-
-    if (!$tags || !is_array($tags)) {
-        wp_send_json_error('No tags provided');
-        return;
+    // Clean any output buffers
+    while (ob_get_level()) {
+        ob_end_clean();
     }
-
-    // Sanitize tags
-    $tags = array_map('sanitize_text_field', $tags);
-
-    // Get existing tags
-    $existing_tags = wp_get_post_tags($post_id, array('fields' => 'names'));
     
-    // Combine existing and new tags, removing duplicates
-    $all_tags = array_unique(array_merge($existing_tags, $tags));
-
-    // Save tags
-    $result = wp_set_post_tags($post_id, $all_tags);
-
-    if ($result) {
-        wp_send_json_success('Tags saved successfully');
-    } else {
-        wp_send_json_error('Failed to save tags');
+    header('Content-Type: application/json');
+    
+    try {
+        if (!check_ajax_referer('openai_tag_suggester_nonce', 'nonce', false)) {
+            throw new Exception('Security check failed');
+        }
+        
+        if (!isset($_POST['post_id']) || !isset($_POST['taxonomy']) || !isset($_POST['tags'])) {
+            throw new Exception('Missing required data');
+        }
+        
+        $post_id = intval($_POST['post_id']);
+        $taxonomy = sanitize_text_field($_POST['taxonomy']);
+        $new_tags = array_map('sanitize_text_field', $_POST['tags']);
+        
+        // Verify the taxonomy is registered
+        if (!taxonomy_exists($taxonomy)) {
+            throw new Exception('Invalid taxonomy');
+        }
+        
+        // Get existing terms
+        $existing_terms = wp_get_object_terms($post_id, $taxonomy, array('fields' => 'names'));
+        if (is_wp_error($existing_terms)) {
+            throw new Exception($existing_terms->get_error_message());
+        }
+        
+        // Merge existing and new tags
+        $all_terms = array_unique(array_merge($existing_terms, $new_tags));
+        
+        // Set the terms
+        $result = wp_set_object_terms($post_id, $all_terms, $taxonomy);
+        if (is_wp_error($result)) {
+            throw new Exception($result->get_error_message());
+        }
+        
+        echo json_encode(array(
+            'success' => true,
+            'data' => array(
+                'message' => 'Tags saved successfully',
+                'tags' => $all_terms
+            )
+        ));
+        
+    } catch (Exception $e) {
+        echo json_encode(array(
+            'success' => false,
+            'data' => $e->getMessage()
+        ));
     }
+    
+    exit();
+}
+
+// Add this function to get available taxonomies
+function openai_tag_suggester_get_available_taxonomies() {
+    return array(
+        'post_tag' => 'Tags',
+        'hashtag' => 'Hashtags'
+    );
+}
+
+// Add sanitization callback for taxonomies
+function openai_tag_suggester_sanitize_taxonomies($taxonomies) {
+    error_log('Sanitizing taxonomies: ' . print_r($taxonomies, true));
+    
+    if (!is_array($taxonomies)) {
+        error_log('Taxonomies is not an array, defaulting to post_tag');
+        return array('post_tag');
+    }
+    
+    // Get available taxonomies
+    $available_taxonomies = array_keys(openai_tag_suggester_get_available_taxonomies());
+    error_log('Available taxonomies: ' . print_r($available_taxonomies, true));
+    
+    // Filter out any invalid taxonomies
+    $taxonomies = array_filter($taxonomies, function($tax) use ($available_taxonomies) {
+        return in_array($tax, $available_taxonomies);
+    });
+    
+    error_log('Filtered taxonomies: ' . print_r($taxonomies, true));
+    
+    // Ensure we have at least post_tag
+    if (empty($taxonomies)) {
+        error_log('No valid taxonomies, defaulting to post_tag');
+        return array('post_tag');
+    }
+    
+    return array_values($taxonomies);
+}
+
+// Ensure default Tags meta box is present
+add_action('init', function() {
+    // Re-register the default post_tag taxonomy to ensure its meta box appears
+    register_taxonomy('post_tag', 'post', array(
+        'hierarchical' => false,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'show_in_rest' => true,
+        'labels' => array(
+            'name' => _x('Tags', 'taxonomy general name'),
+            'singular_name' => _x('Tag', 'taxonomy singular name'),
+            'menu_name' => __('Tags'),
+        )
+    ));
+});
+
+// Remove any code that might be interfering with the default Tags box
+remove_action('add_meta_boxes', 'remove_default_tags_meta_box', 10);
+
+// Register the hashtag taxonomy
+add_action('init', function() {
+    register_taxonomy('hashtag', 'post', array(
+        'hierarchical' => false,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'show_in_rest' => true,
+        'labels' => array(
+            'name' => _x('Hashtags', 'taxonomy general name'),
+            'singular_name' => _x('Hashtag', 'taxonomy singular name'),
+            'menu_name' => __('Hashtags'),
+            'add_new_item' => __('Add New Hashtag'),
+            'new_item_name' => __('New Hashtag Name'),
+        )
+    ));
+});
+
+// Add meta boxes for both taxonomies
+add_action('add_meta_boxes', 'openai_tag_suggester_add_meta_boxes');
+function openai_tag_suggester_add_meta_boxes() {
+    // Add AI Tag Suggestions box
+    add_meta_box(
+        'openai_tag_suggester_meta_box',
+        'AI Tag Suggestions',
+        'openai_tag_suggester_meta_box_callback',
+        'post',
+        'side',
+        'low'
+    );
 }
 ?>
