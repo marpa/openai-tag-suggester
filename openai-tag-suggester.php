@@ -40,14 +40,19 @@ function openai_tag_suggester_settings() {
     // API Key setting
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_api_key');
     
+    // Model setting
+    register_setting('openai_tag_suggester_options', 'openai_tag_suggester_model', array(
+        'default' => 'gpt-3.5-turbo'
+    ));
+    
     // System Role setting
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_system_role', array(
-        'default' => 'You are a university communications specialist. You are tasked with suggesting tags for faculty profiles that highlight their research interests.'
+        'default' => 'You are a university communications specialist. You are tasked with suggesting tags for faculty profiles that highlight their research interests. You must return ONLY a comma-separated list of tags.'
     ));
     
     // User Role setting
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_user_role', array(
-        'default' => 'Suggest 3-15 tags for the following faculty profile. There should NOT be any tag suggestions for places, for position titles, or for names of people.'
+        'default' => 'Suggest 3-15 tags for the following faculty profile. There should NOT be any tag suggestions for places, for position titles, or for names of people. Tags should not be longer than 2-3 words. Format your response as a simple comma-separated list of tags without any additional text, numbering, or explanations. Example format: "tag1, tag2, tag3"'
     ));
 
     // Enabled Taxonomies setting
@@ -81,6 +86,14 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester_api_key',
         'OpenAI API Key',
         'openai_tag_suggester_api_key_field',
+        'openai_tag_suggester',
+        'openai_tag_suggester_main'
+    );
+
+    add_settings_field(
+        'openai_tag_suggester_model',
+        'Model',
+        'openai_tag_suggester_model_field',
         'openai_tag_suggester',
         'openai_tag_suggester_main'
     );
@@ -145,6 +158,23 @@ function openai_tag_suggester_api_key_field() {
     echo "<input type='text' size='50' name='openai_tag_suggester_api_key' value='" . esc_attr($api_key) . "' />";
 }
 
+function openai_tag_suggester_model_field() {
+    $model = get_option('openai_tag_suggester_model', 'gpt-3.5-turbo');
+    $models = array(
+        'gpt-3.5-turbo' => 'GPT-3.5 Turbo (Faster, less accurate)',
+        'gpt-4' => 'GPT-4 (Slower, more accurate)',
+        'gpt-4-turbo' => 'GPT-4 Turbo (Balanced)'
+    );
+    
+    echo '<select name="openai_tag_suggester_model">';
+    foreach ($models as $model_id => $model_name) {
+        $selected = ($model === $model_id) ? 'selected' : '';
+        echo '<option value="' . esc_attr($model_id) . '" ' . $selected . '>' . esc_html($model_name) . '</option>';
+    }
+    echo '</select>';
+    echo '<p class="description">GPT-4 models follow instructions better but cost more and are slower.</p>';
+}
+
 function openai_tag_suggester_system_role_field() {
     $system_role = get_option('openai_tag_suggester_system_role');
     echo "<textarea name='openai_tag_suggester_system_role' rows='4' cols='50'>" . esc_textarea($system_role) . "</textarea>";
@@ -180,6 +210,56 @@ function openai_tag_suggester_generate_tags($post_id, $post) {
     }
 }
 
+/**
+ * Helper function to process tags from OpenAI response
+ */
+function openai_tag_suggester_process_tags($tags) {
+    // If we have a single tag that's longer than expected, it might be multiple tags
+    if (count($tags) === 1) {
+        $single_tag = $tags[0];
+        
+        // Check if it contains multiple words (potential multiple tags)
+        $words = explode(' ', $single_tag);
+        if (count($words) > 3) {
+            // Try to split by other delimiters that might be present
+            $potential_tags = preg_split('/[;|•]+/', $single_tag);
+            
+            if (count($potential_tags) > 1) {
+                // We found multiple tags using alternate delimiters
+                return array_map('trim', $potential_tags);
+            }
+            
+            // Check if it might be a list without proper delimiters
+            if (preg_match_all('/\b([A-Z][a-z]+(?:\s+[a-z]+){0,2})\b/', $single_tag, $matches)) {
+                if (count($matches[1]) > 1) {
+                    return array_map('trim', $matches[1]);
+                }
+            }
+        }
+    }
+    
+    return $tags;
+}
+
+/**
+ * Debug function to log detailed information about the API response
+ */
+function openai_tag_suggester_debug_response($content) {
+    error_log('=== DEBUG TAG RESPONSE ===');
+    error_log('Raw content: "' . $content . '"');
+    error_log('Content length: ' . strlen($content));
+    error_log('Contains commas: ' . (strpos($content, ',') !== false ? 'YES' : 'NO'));
+    error_log('Contains newlines: ' . (strpos($content, "\n") !== false ? 'YES' : 'NO'));
+    error_log('Character codes: ' . implode(',', array_map(function($char) {
+        return ord($char);
+    }, str_split($content))));
+    
+    // Test different parsing methods
+    error_log('Split by commas: ' . print_r(explode(',', $content), true));
+    error_log('Split by regex: ' . print_r(preg_split('/,/', $content), true));
+    error_log('Split by preg_match_all: ' . print_r(preg_match_all('/([^,]+)/', $content, $matches) ? $matches[1] : [], true));
+}
+
 function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
     $url = 'https://api.openai.com/v1/chat/completions';
     
@@ -189,6 +269,7 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
     // Get custom prompts from settings
     $system_role = get_option('openai_tag_suggester_system_role');
     $user_role = get_option('openai_tag_suggester_user_role');
+    $model = get_option('openai_tag_suggester_model', 'gpt-3.5-turbo');
     
     // Modify prompt based on taxonomy
     $taxonomy_label = openai_tag_suggester_get_available_taxonomies()[$taxonomy];
@@ -198,20 +279,30 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         $user_role .= " Include the # symbol with each suggestion.";
     }
     
+    // Add explicit formatting instructions to ensure proper tag separation
+    $user_role .= " Format your response as a comma-separated list of tags. Do not include any explanations or additional text.";
+    
     $data = array(
-        'model' => 'gpt-3.5-turbo',
+        'model' => $model,
         'messages' => array(
             array(
                 'role' => 'system',
-                'content' => $system_role
+                'content' => $system_role . " Return ONLY a comma-separated list of 5-10 distinct tags without any additional text, numbering, or formatting."
             ),
             array(
                 'role' => 'user',
-                'content' => $user_role . ": $cleaned_content"
+                'content' => $user_role . " Generate EXACTLY 5-10 separate tags, formatted as: tag1, tag2, tag3, etc. Content: $cleaned_content"
+            ),
+            array(
+                'role' => 'assistant',
+                'content' => "I'll provide a comma-separated list of 5-10 distinct tags."
             )
         ),
         'temperature' => 0.7,
-        'max_tokens' => 150
+        'max_tokens' => 250,
+        'response_format' => array(
+            'type' => 'text'
+        )
     );
 
     $args = array(
@@ -234,8 +325,250 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
     error_log('OpenAI API response: ' . print_r($result, true));
 
     if (isset($result['choices'][0]['message']['content'])) {
-        $tags = explode(',', $result['choices'][0]['message']['content']);
-        return array_map('trim', $tags);
+        $content = $result['choices'][0]['message']['content'];
+        error_log('Raw content from API: ' . $content);
+        
+        // Debug the response
+        openai_tag_suggester_debug_response($content);
+        
+        // First, check if the content is just a single word or phrase
+        if (!preg_match('/[,\n]/', $content) && strlen($content) < 50) {
+            // This is likely a single tag - force a retry with more explicit instructions
+            error_log('Content appears to be a single tag, forcing retry');
+            
+            // Create a new array with this single tag
+            $single_tag = array(trim($content));
+            
+            // Make another API call with more explicit instructions
+            $user_role = "Generate EXACTLY 5 separate tags for this content. Each tag should be 1-3 words maximum. Format as: tag1, tag2, tag3, tag4, tag5";
+            
+            $data = array(
+                'model' => $model,
+                'messages' => array(
+                    array(
+                        'role' => 'system',
+                        'content' => "You are a tagging specialist. Return ONLY a comma-separated list of 5 distinct tags. No explanations or other text."
+                    ),
+                    array(
+                        'role' => 'user',
+                        'content' => $user_role . ": $cleaned_content"
+                    )
+                ),
+                'temperature' => 0.7,
+                'max_tokens' => 250
+            );
+            
+            $args = array(
+                'body' => json_encode($data),
+                'headers' => array(
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $api_key,
+                ),
+            );
+            
+            $retry_response = wp_remote_post($url, $args);
+            if (!is_wp_error($retry_response)) {
+                $retry_body = wp_remote_retrieve_body($retry_response);
+                $retry_result = json_decode($retry_body, true);
+                
+                error_log('Retry API response: ' . print_r($retry_result, true));
+                
+                if (isset($retry_result['choices'][0]['message']['content'])) {
+                    $retry_content = $retry_result['choices'][0]['message']['content'];
+                    error_log('Retry raw content: ' . $retry_content);
+                    
+                    // Split by commas
+                    $retry_tags = array_map('trim', explode(',', $retry_content));
+                    
+                    // Filter out empty tags
+                    $retry_tags = array_filter($retry_tags, function($tag) {
+                        return !empty($tag);
+                    });
+                    
+                    if (count($retry_tags) > 1) {
+                        error_log('Successfully got multiple tags from retry: ' . print_r($retry_tags, true));
+                        return array_values($retry_tags);
+                    }
+                }
+            }
+            
+            // If retry failed, return the original single tag
+            return $single_tag;
+        }
+        
+        // First, try to extract a list if the response contains numbered items
+        if (preg_match_all('/\d+\.\s*([^,\n]+)/', $content, $matches)) {
+            error_log('Matched numbered list: ' . print_r($matches[1], true));
+            return array_map('trim', $matches[1]);
+        }
+        
+        // Next, try to extract items from a bulleted list - but be careful not to match hyphens in words
+        if (preg_match_all('/(?:^|\n)\s*[-*•]\s+([^,\n]+)/', $content, $matches)) {
+            error_log('Matched bulleted list: ' . print_r($matches[1], true));
+            return array_map('trim', $matches[1]);
+        }
+        
+        // Most common case: comma-separated list (which is what we're getting from the API)
+        if (strpos($content, ',') !== false) {
+            // Use a more robust regex to split by commas while preserving hyphenated words
+            $tags = preg_split('/,\s*/', $content);
+            error_log('Split by commas with regex: ' . print_r($tags, true));
+            
+            // Clean up the tags
+            $tags = array_map(function($tag) {
+                return trim($tag);
+            }, $tags);
+            
+            // Filter out empty tags
+            $tags = array_filter($tags, function($tag) {
+                return !empty($tag);
+            });
+            
+            if (count($tags) > 1) {
+                return array_values($tags);
+            }
+        }
+        
+        // If no commas, try splitting by newlines
+        if (strpos($content, "\n") !== false) {
+            $tags = array_map('trim', explode("\n", $content));
+            error_log('Split by newlines: ' . print_r($tags, true));
+            
+            // Filter out empty tags
+            $tags = array_filter($tags, function($tag) {
+                return !empty($tag);
+            });
+            
+            if (count($tags) > 1) {
+                return array_values($tags);
+            }
+        }
+        
+        // If we get here, we need to try more advanced parsing
+        $tags = preg_split('/[,\n]+/', $content);
+        error_log('Split by commas/newlines: ' . print_r($tags, true));
+        
+        // Clean up the tags
+        $tags = array_map(function($tag) {
+            // Remove any numbering, bullets, or quotes
+            $tag = preg_replace('/^\d+\.\s*|^[-*•]\s*|^["\']+|["\']+$/', '', $tag);
+            return trim($tag);
+        }, $tags);
+        
+        // Filter out empty tags
+        $tags = array_filter($tags, function($tag) {
+            return !empty($tag);
+        });
+        
+        $result_tags = array_values($tags);
+        error_log('Final tags: ' . print_r($result_tags, true));
+        
+        // If we still only have one tag, try to split it further
+        if (count($result_tags) === 1 && strpos($result_tags[0], ' ') !== false) {
+            $single_tag = $result_tags[0];
+            error_log('Attempting to split single tag: ' . $single_tag);
+            
+            // First, check if it's a sentence or paragraph that needs to be parsed
+            if (strlen($single_tag) > 50) {
+                // This is likely a paragraph or sentence, not a tag
+                // Try to extract comma-separated values that might be embedded in text
+                if (preg_match_all('/\b([^,.]+(?:\s+[^,.]{1,20}){0,2})[,.]/', $single_tag . ',', $matches)) {
+                    $extracted_tags = array_map('trim', $matches[1]);
+                    error_log('Extracted tags from text: ' . print_r($extracted_tags, true));
+                    if (count($extracted_tags) > 1) {
+                        return $extracted_tags;
+                    }
+                }
+                
+                // Try to find tags in quotes
+                if (preg_match_all('/"([^"]+)"/', $single_tag, $matches)) {
+                    $quoted_tags = array_map('trim', $matches[1]);
+                    error_log('Extracted quoted tags: ' . print_r($quoted_tags, true));
+                    if (count($quoted_tags) > 1) {
+                        return $quoted_tags;
+                    }
+                }
+                
+                // Last resort: try to split by common separators
+                $separators = array(', ', '; ', ' - ', ' | ', ' and ', ' or ');
+                foreach ($separators as $separator) {
+                    if (strpos($single_tag, $separator) !== false) {
+                        $split_tags = array_map('trim', explode($separator, $single_tag));
+                        error_log('Split by separator "' . $separator . '": ' . print_r($split_tags, true));
+                        if (count($split_tags) > 1) {
+                            return $split_tags;
+                        }
+                    }
+                }
+            }
+            
+            // Don't split by spaces unless we're sure it's not a legitimate multi-word tag
+            // Instead, let's try to force a better response from OpenAI
+        }
+        
+        // If we still only have one tag, make another API call with more explicit instructions
+        if (count($result_tags) === 1) {
+            error_log('Still only one tag, making another API call with more explicit instructions');
+            
+            // Modify the prompt to be even more explicit
+            $user_role = "Generate EXACTLY 5 separate tags for this content. Each tag should be 1-3 words maximum. Format as: tag1, tag2, tag3, tag4, tag5";
+            
+            $data = array(
+                'model' => $model,
+                'messages' => array(
+                    array(
+                        'role' => 'system',
+                        'content' => "You are a tagging specialist. Return ONLY a comma-separated list of 5 distinct tags. No explanations or other text."
+                    ),
+                    array(
+                        'role' => 'user',
+                        'content' => $user_role . ": $cleaned_content"
+                    )
+                ),
+                'temperature' => 0.7,
+                'max_tokens' => 250
+            );
+            
+            $args = array(
+                'body' => json_encode($data),
+                'headers' => array(
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $api_key,
+                ),
+            );
+            
+            $retry_response = wp_remote_post($url, $args);
+            if (!is_wp_error($retry_response)) {
+                $retry_body = wp_remote_retrieve_body($retry_response);
+                $retry_result = json_decode($retry_body, true);
+                
+                error_log('Retry API response: ' . print_r($retry_result, true));
+                
+                if (isset($retry_result['choices'][0]['message']['content'])) {
+                    $retry_content = $retry_result['choices'][0]['message']['content'];
+                    error_log('Retry raw content: ' . $retry_content);
+                    
+                    // Split by commas
+                    $retry_tags = array_map('trim', explode(',', $retry_content));
+                    
+                    // Filter out empty tags
+                    $retry_tags = array_filter($retry_tags, function($tag) {
+                        return !empty($tag);
+                    });
+                    
+                    if (count($retry_tags) > 1) {
+                        error_log('Successfully got multiple tags from retry: ' . print_r($retry_tags, true));
+                        return array_values($retry_tags);
+                    }
+                }
+            }
+        }
+        
+        // Process tags with our helper function
+        $result_tags = openai_tag_suggester_process_tags($result_tags);
+        error_log('Processed tags: ' . print_r($result_tags, true));
+        
+        return $result_tags;
     }
 
     return [];
