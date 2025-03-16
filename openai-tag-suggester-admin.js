@@ -186,8 +186,10 @@ jQuery(document).ready(function($) {
         tagHtml += '<div class="tag-controls" style="margin-bottom: 10px;">';
         tagHtml += '<button type="button" id="select_all_tags" name="select_all_tags" class="button select-all-tags">Select All</button> ';
         tagHtml += '<button type="button" id="select_none_tags" name="select_none_tags" class="button select-none-tags">Select None</button> ';
-        tagHtml += '<button type="button" class="button button-primary add-selected-tags">Add Selected Tags</button>';
         tagHtml += '</div>';
+        
+        // Add a separate Add Selected Tags button with proper styling
+        tagHtml += '<button type="button" class="button button-primary add-selected-tags" style="width: 100%; margin-bottom: 10px;">Add Selected Tags</button>';
         
         // Add tag checkboxes
         tagHtml += '<div class="tag-list" style="margin-bottom: 10px;">';

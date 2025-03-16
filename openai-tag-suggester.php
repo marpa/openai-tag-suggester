@@ -583,18 +583,106 @@ function openai_tag_suggester_add_meta_box() {
         'AI Tag Suggestions',
         'openai_tag_suggester_meta_box_callback',
         'post',
-        'normal',  // Changed from 'side' to 'normal' for better visibility
-        'high'     // High priority to ensure it's at the top
+        'side',  // Changed from 'normal' to 'side' to place it in the right sidebar
+        'high'   // High priority to ensure it's at the top of the sidebar
     );
     
     // For Classic Editor, we need to ensure the meta box is visible
     if (openai_tag_suggester_is_classic_editor()) {
         // Add a script to ensure the meta box is visible in Classic Editor
         add_action('admin_footer', 'openai_tag_suggester_ensure_metabox_visible');
+    } else {
+        // For Block Editor, add a script to adjust the width
+        add_action('admin_footer', 'openai_tag_suggester_adjust_block_editor_width');
     }
     
     // Debug log
-    error_log('OpenAI Tag Suggester: Meta box added with high priority');
+    error_log('OpenAI Tag Suggester: Meta box added with high priority to side panel');
+}
+
+// Add function to adjust width in Block Editor
+function openai_tag_suggester_adjust_block_editor_width() {
+    ?>
+    <script type="text/javascript">
+    jQuery(document).ready(function($) {
+        console.log('OpenAI Tag Suggester: Adjusting width for Block Editor');
+        
+        // Add a class to identify Block Editor mode
+        $('#openai_tag_suggester_container').addClass('block-editor-mode');
+        
+        // Add custom CSS for Block Editor
+        var css = `
+            .edit-post-meta-boxes-area #openai_tag_suggester_meta_box {
+                max-width: 300px !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                border: 1px solid #005035 !important;
+            }
+            
+            .edit-post-meta-boxes-area #openai_tag_suggester_meta_box .inside {
+                padding: 8px !important;
+                margin: 0 !important;
+            }
+            
+            .edit-post-meta-boxes-area .taxonomy-selector select {
+                max-width: 100% !important;
+                font-size: 12px !important;
+            }
+            
+            .edit-post-meta-boxes-area #openai_tag_suggester_meta_box .components-panel__header {
+                background-color: #005035 !important;
+            }
+            
+            .edit-post-meta-boxes-area #openai_tag_suggester_meta_box .components-panel__header h2 {
+                color: #ffffff !important;
+            }
+            
+            .edit-post-meta-boxes-area #openai_tag_suggester_button,
+            .edit-post-meta-boxes-area .add-selected-tags {
+                background-color: #005035 !important;
+                border-color: #003824 !important;
+                color: #ffffff !important;
+                width: 100% !important;
+                text-align: center !important;
+            }
+            
+            .edit-post-meta-boxes-area #openai_tag_suggester_button:hover,
+            .edit-post-meta-boxes-area .add-selected-tags:hover {
+                background-color: #006a46 !important;
+                border-color: #005035 !important;
+            }
+            
+            .edit-post-meta-boxes-area #openai_tag_suggester_button:focus,
+            .edit-post-meta-boxes-area .add-selected-tags:focus {
+                box-shadow: 0 0 0 1px #ffffff, 0 0 0 3px #005035 !important;
+            }
+            
+            .edit-post-meta-boxes-area .tag-controls {
+                display: flex !important;
+                gap: 4px !important;
+                width: 100% !important;
+            }
+            
+            .edit-post-meta-boxes-area .tag-controls button {
+                flex: 0 0 48% !important;
+                color: #005035 !important;
+                border-color: #005035 !important;
+                text-align: center !important;
+                padding: 0 !important;
+                font-size: 11px !important;
+            }
+            
+            .edit-post-meta-boxes-area .tag-controls button:hover {
+                background-color: #f0f7f4 !important;
+                border-color: #005035 !important;
+            }
+        `;
+        
+        // Add the CSS to the page
+        $('<style>').text(css).appendTo('head');
+    });
+    </script>
+    <?php
 }
 
 function openai_tag_suggester_meta_box_callback($post) {
@@ -641,8 +729,8 @@ function openai_tag_suggester_meta_box_callback($post) {
     // Results area
     echo '<div id="openai_tag_suggester_results" class="tag-results-container"></div>';
     
-    // Add debug info for Classic Editor
-    if (openai_tag_suggester_is_classic_editor()) {
+    // Add debug info for Classic Editor only in debug mode
+    if (openai_tag_suggester_is_classic_editor() && defined('WP_DEBUG') && WP_DEBUG) {
         echo '<div class="classic-editor-info" style="margin-top: 10px; font-size: 11px; color: #666;">';
         echo 'Classic Editor detected. Tags will be added to the Tags meta box.';
         echo '</div>';
@@ -650,13 +738,15 @@ function openai_tag_suggester_meta_box_callback($post) {
     
     echo '</div>';
     
-    // Add visible debug info
-    echo '<div class="debug-info" style="margin-top: 15px; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; font-size: 11px;">';
-    echo '<p><strong>Debug Info:</strong></p>';
-    echo '<p>Editor Type: ' . ($editor_class == 'classic-editor-mode' ? 'Classic Editor' : 'Block Editor') . '</p>';
-    echo '<p>Meta Box ID: openai_tag_suggester_meta_box</p>';
-    echo '<p>Enabled Taxonomies: ' . implode(', ', $enabled_taxonomies) . '</p>';
-    echo '</div>';
+    // Add visible debug info only in debug mode
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        echo '<div class="debug-info" style="margin-top: 8px; padding: 5px; background: #f8f8f8; border: 1px solid #ddd; font-size: 11px;">';
+        echo '<p><strong>Debug Info:</strong></p>';
+        echo '<p>Editor Type: ' . ($editor_class == 'classic-editor-mode' ? 'Classic Editor' : 'Block Editor') . '</p>';
+        echo '<p>Meta Box ID: openai_tag_suggester_meta_box</p>';
+        echo '<p>Enabled Taxonomies: ' . implode(', ', $enabled_taxonomies) . '</p>';
+        echo '</div>';
+    }
 }
 
 // Function to ensure the meta box is visible in Classic Editor
@@ -804,7 +894,7 @@ function openai_tag_suggester_enqueue_admin_scripts($hook) {
         'openai-tag-suggester-admin', 
         plugin_dir_url(__FILE__) . 'openai-tag-suggester-admin.css',
         array(),
-        '1.0.1'  // Increment version to bust cache
+        '1.0.7'  // Increment version to bust cache
     );
     
     // Enqueue our custom JavaScript file
@@ -812,7 +902,7 @@ function openai_tag_suggester_enqueue_admin_scripts($hook) {
         'openai-tag-suggester-admin', 
         plugin_dir_url(__FILE__) . 'openai-tag-suggester-admin.js', 
         array('jquery'), 
-        '1.0.1',  // Increment version to bust cache
+        '1.0.2',  // Increment version to bust cache
         true  // Load in footer
     );
     
@@ -1121,6 +1211,11 @@ function openai_tag_suggester_add_admin_body_class($classes) {
 // Add an admin notice to help debug
 add_action('admin_notices', 'openai_tag_suggester_admin_notice');
 function openai_tag_suggester_admin_notice() {
+    // Only show in debug mode
+    if (!defined('WP_DEBUG') || !WP_DEBUG) {
+        return;
+    }
+    
     $screen = get_current_screen();
     
     // Only show on post edit screen
@@ -1130,12 +1225,11 @@ function openai_tag_suggester_admin_notice() {
     
     $is_classic = openai_tag_suggester_is_classic_editor() ? 'Yes' : 'No';
     
-    echo '<div class="notice notice-info is-dismissible">';
-    echo '<p><strong>OpenAI Tag Suggester Debug:</strong></p>';
-    echo '<p>Current Screen: ' . $screen->base . '</p>';
-    echo '<p>Post Type: ' . $screen->post_type . '</p>';
-    echo '<p>Using Classic Editor: ' . $is_classic . '</p>';
-    echo '<p>If you don\'t see the AI Tag Suggestions meta box, please check the Screen Options at the top of the page.</p>';
+    echo '<div class="notice notice-info is-dismissible" style="padding: 8px 12px; font-size: 13px;">';
+    echo '<p><strong>OpenAI Tag Suggester:</strong> ';
+    echo 'Using ' . ($is_classic ? 'Classic Editor' : 'Block Editor') . ' | ';
+    echo 'Screen: ' . $screen->base . ' | ';
+    echo 'Post Type: ' . $screen->post_type . '</p>';
     echo '</div>';
 }
 
@@ -1184,16 +1278,44 @@ function openai_tag_suggester_force_metabox_visibility() {
                 visibility: visible !important;
                 opacity: 1 !important;
                 background-color: #f8f8f8 !important;
-                border: 2px solid #007cba !important;
+                border: 1px solid #005035 !important;
                 margin-top: 20px !important;
             }
             #openai_tag_suggester_meta_box h2 {
-                background-color: #e0f0ff !important;
-                color: #000 !important;
+                background-color: #005035 !important;
+                color: #ffffff !important;
                 font-weight: bold !important;
             }
             #openai_tag_suggester_meta_box .inside {
                 padding: 10px !important;
+            }
+            #openai_tag_suggester_button,
+            .add-selected-tags {
+                background-color: #005035 !important;
+                border-color: #003824 !important;
+                color: #ffffff !important;
+            }
+            #openai_tag_suggester_button:hover,
+            .add-selected-tags:hover {
+                background-color: #006a46 !important;
+                border-color: #005035 !important;
+            }
+            .tag-controls {
+                display: flex !important;
+                gap: 5px !important;
+                width: 100% !important;
+            }
+            .tag-controls button {
+                flex: 0 0 48% !important;
+                color: #005035 !important;
+                border-color: #005035 !important;
+                text-align: center !important;
+                padding: 0 !important;
+                font-size: 11px !important;
+            }
+            .tag-controls button:hover {
+                background-color: #f0f7f4 !important;
+                border-color: #005035 !important;
             }
         `;
         
@@ -1223,8 +1345,14 @@ function openai_tag_suggester_force_metabox_visibility() {
                 '</div>' +
                 '</div></div>');
             
-            // Add it to the normal meta box container
-            $('#normal-sortables').prepend(metaBox);
+            // Add it to the side meta box container, right after the publish box
+            var $publishBox = $('#submitdiv');
+            if ($publishBox.length) {
+                metaBox.insertAfter($publishBox);
+            } else {
+                // Fallback to adding it to the side sortables container
+                $('#side-sortables').prepend(metaBox);
+            }
             
             // Make sure it's visible
             $('#openai_tag_suggester_meta_box').show();
@@ -1234,6 +1362,14 @@ function openai_tag_suggester_force_metabox_visibility() {
         } else {
             console.log('OpenAI Tag Suggester: Meta box found, ensuring visibility');
             $('#openai_tag_suggester_meta_box').show();
+            
+            // Move the meta box to the side panel if it's not already there
+            var $metaBox = $('#openai_tag_suggester_meta_box');
+            var $publishBox = $('#submitdiv');
+            
+            if ($publishBox.length && !$metaBox.parent().is('#side-sortables')) {
+                $metaBox.insertAfter($publishBox);
+            }
             
             // Check if the inside content exists
             if ($('#openai_tag_suggester_container').length === 0) {

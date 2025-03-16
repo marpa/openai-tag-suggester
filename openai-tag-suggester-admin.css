@@ -7,59 +7,73 @@
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    margin-top: 20px !important;
-    border: 2px solid #007cba !important;
     background-color: #f8f8f8 !important;
+    border: 1px solid #005035 !important; /* Updated darker green border */
+    margin-top: 20px !important;
 }
 
 #openai_tag_suggester_meta_box h2.hndle {
-    background-color: #e0f0ff !important;
-    color: #000 !important;
+    background-color: #005035 !important; /* Updated darker green background */
+    color: #ffffff !important; /* White text for contrast */
     font-weight: bold !important;
+    font-size: 14px !important;
+    padding: 8px 12px !important;
 }
 
 #openai_tag_suggester_meta_box .inside {
-    padding: 10px !important;
+    padding: 8px !important;
+    margin: 0 !important;
 }
 
 /* Tag suggestion container */
 .ai-tag-suggester {
-    margin: 10px 0;
+    margin: 0;
+    font-size: 13px;
 }
 
-/* Tag suggestion items */
-.ai-tag-suggester .tag-suggestion {
-    margin: 5px 0;
-    padding: 3px 0;
+.ai-tag-suggester .howto {
+    margin: 0 0 8px 0;
+    font-size: 12px;
 }
 
-/* Controls for tag selection */
-.ai-tag-suggester .tag-controls {
-    margin: 10px 0;
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap; /* Allow buttons to wrap on narrow screens */
+.ai-tag-suggester .taxonomy-selector {
+    margin-bottom: 8px !important;
 }
 
-.ai-tag-suggester .tag-controls .button {
-    flex: 0 1 auto; /* Allow buttons to shrink but not grow */
+.ai-tag-suggester .taxonomy-selector label {
+    margin-bottom: 3px;
+    font-size: 12px;
 }
 
-.ai-tag-suggester .tag-controls .add-selected-tags {
-    margin-left: auto; /* Push the Add Selected Tags button to the right */
-}
-
-/* Tag list container */
 .ai-tag-suggester .tag-list {
-    max-height: 200px;
+    max-height: 150px;
     overflow-y: auto;
-    margin: 10px 0;
+    margin: 8px 0;
     padding: 5px;
     border: 1px solid #ddd;
     background: #fff;
+    font-size: 12px;
 }
 
-/* Existing tag styling */
+.ai-tag-suggester .tag-controls {
+    margin: 8px 0;
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+}
+
+.ai-tag-suggester .tag-controls .button {
+    font-size: 11px;
+    padding: 0 5px;
+    height: 24px;
+    line-height: 22px;
+}
+
+.ai-tag-suggester .tag-suggestion {
+    margin: 3px 0;
+    padding: 2px 0;
+}
+
 .ai-tag-suggester .existing-tag {
     opacity: 0.7;
 }
@@ -70,10 +84,10 @@
     font-style: italic;
 }
 
-/* Notice styling */
 .ai-tag-suggester .notice {
-    margin: 10px 0;
-    padding: 5px 10px;
+    margin: 8px 0;
+    padding: 5px 8px;
+    font-size: 12px;
 }
 
 .ai-tag-suggester .notice-success {
@@ -84,26 +98,16 @@
     border-left: 4px solid #dc3232;
 }
 
-/* Taxonomy selector */
-.ai-tag-suggester .taxonomy-selector {
-    margin-bottom: 15px;
-}
-
-.ai-tag-suggester .taxonomy-selector label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-}
-
-.ai-tag-suggester .taxonomy-selector select {
-    width: 100%;
-    max-width: 100%;
-}
-
-/* Bottom add button */
 .ai-tag-suggester .add-selected-tags:last-child {
-    width: 100%; /* Make the bottom button full width */
-    margin-top: 10px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+/* Debug info */
+.debug-info {
+    font-size: 11px !important;
+    padding: 5px !important;
+    margin-top: 8px !important;
 }
 
 /* Classic Editor specific styles */
@@ -130,8 +134,9 @@ body.using-classic-editor #openai_tag_suggester_meta_box {
 
 /* Add a highlight to the meta box in Classic Editor */
 body.wp-admin.post-php #openai_tag_suggester_meta_box h2.hndle {
-    background-color: #f0f7fc;
-    border-bottom: 1px solid #c3e0f7;
+    background-color: #005035 !important; /* Updated darker green background */
+    color: #ffffff !important; /* White text for contrast */
+    border-bottom: 1px solid #006a46 !important; /* Slightly lighter green border */
 }
 
 /* Add a small indicator that this is for Classic Editor */
@@ -145,8 +150,78 @@ body.wp-admin.post-php #openai_tag_suggester_meta_box h2.hndle {
 }
 
 /* Block Editor (Gutenberg) specific styles */
-body.block-editor-page .ai-tag-suggester {
-    /* Add any Block Editor specific styles here */
+body.block-editor-page .ai-tag-suggester,
+.block-editor-mode {
+    max-width: 280px;
+    overflow: hidden;
+    padding: 8px;
+    border: 1px solid #ddd;
+    background-color: #f9f9f9;
+    margin-bottom: 10px;
+}
+
+/* Adjust dropdown menu width in Block Editor */
+.block-editor-mode .taxonomy-selector select,
+body.block-editor-page .taxonomy-selector select {
+    max-width: 100%;
+    width: 100%;
+    font-size: 12px;
+}
+
+/* Make the meta box more compact in Block Editor */
+body.block-editor-page #openai_tag_suggester_meta_box {
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px solid #ccd0d4 !important;
+}
+
+/* Ensure the meta box content is properly contained */
+body.block-editor-page #openai_tag_suggester_meta_box .inside {
+    padding: 8px !important;
+    margin: 0 !important;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Make tag list more compact in Block Editor */
+body.block-editor-page .ai-tag-suggester .tag-list,
+.block-editor-mode .tag-list {
+    max-height: 120px;
+    font-size: 11px;
+    padding: 4px;
+}
+
+/* Make buttons smaller in Block Editor */
+body.block-editor-page .ai-tag-suggester .button,
+.block-editor-mode .button {
+    font-size: 11px;
+    padding: 0 5px;
+    height: 24px;
+    line-height: 22px;
+}
+
+/* Adjust tag suggestions in Block Editor */
+body.block-editor-page .ai-tag-suggester .tag-suggestion,
+.block-editor-mode .tag-suggestion {
+    margin: 2px 0;
+    padding: 1px 0;
+    font-size: 11px;
+}
+
+/* Ensure the tag controls are properly sized */
+body.block-editor-page .ai-tag-suggester .tag-controls,
+.block-editor-mode .tag-controls {
+    gap: 2px;
+    margin: 5px 0;
+}
+
+/* Ensure notices are properly sized */
+body.block-editor-page .ai-tag-suggester .notice,
+.block-editor-mode .notice {
+    padding: 4px 6px;
+    margin: 5px 0;
+    font-size: 11px;
 }
 
 /* Loading indicator */
@@ -189,17 +264,47 @@ body.block-editor-page .ai-tag-suggester {
 .tag-controls {
     margin-bottom: 10px;
     display: flex;
-    gap: 10px;
+    gap: 5px;
+    width: 100%;
 }
 
 /* Select All/None buttons */
 .tag-controls button {
-    flex: 1;
+    flex: 0 0 48%; /* Each button takes up 48% of the width */
+    color: #005035 !important;
+    border-color: #005035 !important;
+    text-align: center;
+    padding: 0 !important;
+    font-size: 11px !important;
+}
+
+.tag-controls button:hover {
+    background-color: #f0f7f4 !important;
+    border-color: #005035 !important;
+}
+
+.tag-controls button:focus {
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 2px #005035 !important;
+    border-color: #005035 !important;
 }
 
 /* First Add Selected Tags button */
 .tag-controls + .add-selected-tags {
     margin-bottom: 15px;
+    background-color: #005035 !important;
+    border-color: #003824 !important;
+    color: #ffffff !important;
+    width: 100% !important;
+    text-align: center !important;
+}
+
+.tag-controls + .add-selected-tags:hover {
+    background-color: #006a46 !important;
+    border-color: #005035 !important;
+}
+
+.tag-controls + .add-selected-tags:focus {
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 3px #005035 !important;
 }
 
 .tag-suggestion {
@@ -269,7 +374,9 @@ body.block-editor-page .ai-tag-suggester {
 /* Add these styles to your existing CSS */
 #openai_tag_suggester_taxonomy {
     width: 100%;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    max-height: 30px;
 }
 
 .existing-tag {
@@ -307,4 +414,124 @@ body.block-editor-page .ai-tag-suggester {
 
 .taxonomy-checkbox-label input[type="checkbox"] {
     margin-right: 8px;
+}
+
+/* Dropdown menu styles */
+.ai-tag-suggester select {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Ensure dropdown options are properly sized */
+.ai-tag-suggester select option {
+    font-size: 12px;
+    padding: 2px;
+}
+
+/* Ensure the taxonomy selector is properly sized */
+.ai-tag-suggester .taxonomy-selector {
+    margin-bottom: 8px !important;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Ensure the taxonomy selector label is properly sized */
+.ai-tag-suggester .taxonomy-selector label {
+    font-size: 11px;
+    margin-bottom: 2px;
+    display: block;
+}
+
+/* Additional Block Editor specific styles */
+.edit-post-meta-boxes-area #openai_tag_suggester_meta_box {
+    max-width: 280px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+}
+
+.edit-post-meta-boxes-area #openai_tag_suggester_meta_box .inside {
+    padding: 8px !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.edit-post-meta-boxes-area #openai_tag_suggester_container {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+}
+
+/* Ensure the meta box title is properly sized */
+.edit-post-meta-boxes-area #openai_tag_suggester_meta_box .components-panel__header h2 {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important; /* White text for contrast */
+}
+
+/* Ensure the meta box is not too wide */
+.interface-complementary-area .edit-post-meta-boxes-area #openai_tag_suggester_meta_box {
+    width: 100% !important;
+    max-width: 260px !important;
+}
+
+/* Ensure the tag list is properly sized */
+.edit-post-meta-boxes-area .ai-tag-suggester .tag-list {
+    max-height: 100px !important;
+    font-size: 11px !important;
+}
+
+/* Block Editor panel header background */
+.edit-post-meta-boxes-area #openai_tag_suggester_meta_box .components-panel__header {
+    background-color: #005035 !important; /* Updated darker green background */
+}
+
+/* Style the Generate Tag Suggestions button and Add Selected Tags buttons */
+#openai_tag_suggester_button,
+.add-selected-tags {
+    background-color: #005035 !important;
+    border-color: #003824 !important;
+    color: #ffffff !important;
+}
+
+#openai_tag_suggester_button:hover,
+.add-selected-tags:hover {
+    background-color: #006a46 !important;
+    border-color: #005035 !important;
+}
+
+#openai_tag_suggester_button:focus,
+.add-selected-tags:focus {
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 3px #005035 !important;
+}
+
+/* Ensure the tag controls are properly sized */
+body.block-editor-page .ai-tag-suggester .tag-controls,
+.block-editor-mode .tag-controls {
+    gap: 4px;
+    margin: 5px 0;
+    width: 100%;
+}
+
+/* Ensure the Add Selected Tags button has the same styling in Block Editor */
+.edit-post-meta-boxes-area .add-selected-tags {
+    background-color: #005035 !important;
+    border-color: #003824 !important;
+    color: #ffffff !important;
+    width: 100% !important;
+    text-align: center !important;
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+}
+
+.edit-post-meta-boxes-area .add-selected-tags:hover {
+    background-color: #006a46 !important;
+    border-color: #005035 !important;
+}
+
+.edit-post-meta-boxes-area .add-selected-tags:focus {
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 3px #005035 !important;
 }
