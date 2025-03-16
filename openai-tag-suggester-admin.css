@@ -593,6 +593,90 @@ body.block-editor-page .ai-tag-suggester .tag-controls,
     margin-bottom: 15px;
 }
 
+/* Post type specific meta field containers */
+.content-sources-container h4 {
+    margin-top: 20px;
+    margin-bottom: 5px;
+    color: #005035;
+    font-size: 14px;
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
+}
+
+.content-sources-container h4:first-of-type {
+    margin-top: 15px;
+}
+
+/* Faculty Success specific styles */
+.post-type-faculty_success {
+    border-left: 3px solid #005035;
+}
+
+/* Post specific styles */
+.post-type-post {
+    border-left: 3px solid #0073aa;
+}
+
+/* Page specific styles */
+.post-type-page {
+    border-left: 3px solid #46b450;
+}
+
+/* Other meta fields styles */
+.post-type-other {
+    border-left: 3px solid #ffb900;
+}
+
+/* Select all/none buttons for specific post types */
+.meta-field-controls .button {
+    font-size: 12px;
+    padding: 0 8px;
+    height: 28px;
+    line-height: 26px;
+    margin-right: 5px;
+}
+
+/* General controls */
+.meta-field-controls.general-controls {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 8px;
+    background-color: #f0f7f4;
+    border: 1px solid #005035;
+    border-radius: 4px;
+}
+
+.meta-field-controls.general-controls .button {
+    background-color: #005035;
+    color: #fff;
+    border-color: #003824;
+}
+
+.meta-field-controls.general-controls .button:hover {
+    background-color: #006a46;
+    border-color: #005035;
+}
+
+/* Improve checkbox layout */
+.content-source-item {
+    margin-bottom: 5px;
+}
+
+.content-source-item label {
+    display: flex;
+    align-items: center;
+}
+
+.content-source-item input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+/* Add a subtle hover effect to meta field items */
+.content-source-item:hover {
+    background-color: #f0f0f0;
+}
+
 .content-sources-section-description {
     margin-bottom: 15px;
 }
@@ -600,4 +684,123 @@ body.block-editor-page .ai-tag-suggester .tag-controls,
 .content-sources-section-description ul {
     list-style-type: disc;
     margin-left: 20px;
+}
+
+/* Meta field detection styles */
+.meta-fields-section-description {
+    margin-bottom: 15px;
+}
+
+.meta-fields-section-description ul {
+    list-style-type: disc;
+    margin-left: 20px;
+}
+
+.post-types-container {
+    margin-top: 10px;
+}
+
+.post-types-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #f9f9f9;
+}
+
+.post-type-item {
+    margin-bottom: 5px;
+}
+
+.post-type-controls {
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+.clear-cache-container {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f0f7f4;
+    border: 1px solid #005035;
+    border-radius: 4px;
+}
+
+#clear-meta-fields-cache {
+    background-color: #005035;
+    border-color: #003824;
+    color: #ffffff;
+}
+
+#clear-meta-fields-cache:hover {
+    background-color: #006a46;
+    border-color: #005035;
+}
+
+#cache-cleared-message {
+    display: none;
+    margin-left: 10px;
+    color: #005035;
+    font-weight: bold;
+}
+
+/* Meta fields scan button and results */
+#scan-meta-fields {
+    background-color: #005035;
+    border-color: #003824;
+    color: #ffffff;
+    margin-right: 10px;
+}
+
+#scan-meta-fields:hover {
+    background-color: #006a46;
+    border-color: #005035;
+}
+
+#scan-complete-message {
+    display: none;
+    margin-left: 10px;
+    color: #005035;
+    font-weight: bold;
+}
+
+.current-meta-fields {
+    margin-top: 20px;
+    border: 1px solid #ddd;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+}
+
+.current-meta-fields h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #005035;
+}
+
+.meta-fields-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #fff;
+}
+
+.meta-field-item {
+    padding: 3px 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.meta-field-item:last-child {
+    border-bottom: none;
+}
+
+.no-meta-fields {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-style: italic;
+    color: #666;
 }

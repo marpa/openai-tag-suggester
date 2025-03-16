@@ -52,104 +52,107 @@ function openai_tag_suggester_settings() {
     
     // User Role setting
     register_setting('openai_tag_suggester_options', 'openai_tag_suggester_user_role', array(
-        'default' => 'Suggest 3-15 tags for the following faculty profile. There should NOT be any tag suggestions for places, for position titles, or for names of people. Tags should not be longer than 2-3 words. Format your response as a simple comma-separated list of tags without any additional text, numbering, or explanations. Example format: "tag1, tag2, tag3"'
+        'default' => 'Please suggest tags for the following content. Return ONLY a comma-separated list of tags, with no additional text or explanation.'
     ));
-
-    // Taxonomy-specific prompts setting
-    register_setting(
-        'openai_tag_suggester_options', 
-        'openai_tag_suggester_taxonomy_prompts',
-        array(
-            'type' => 'array',
-            'default' => array(),
-            'sanitize_callback' => 'openai_tag_suggester_sanitize_taxonomy_prompts'
-        )
-    );
-
-    // Enabled Taxonomies setting
-    register_setting(
-        'openai_tag_suggester_options', 
-        'openai_tag_suggester_enabled_taxonomies',
-        array(
-            'type' => 'array',
-            'default' => array('post_tag'),
-            'sanitize_callback' => 'openai_tag_suggester_sanitize_taxonomies'
-        )
-    );
-
-    // Content Sources setting
-    register_setting(
-        'openai_tag_suggester_options', 
-        'openai_tag_suggester_content_sources',
-        array(
-            'type' => 'array',
-            'default' => array('post_content'),
-            'sanitize_callback' => 'openai_tag_suggester_sanitize_content_sources'
-        )
-    );
-
+    
+    // Enabled taxonomies setting
+    register_setting('openai_tag_suggester_options', 'openai_tag_suggester_enabled_taxonomies', array(
+        'sanitize_callback' => 'openai_tag_suggester_sanitize_taxonomies',
+        'default' => array('post_tag')
+    ));
+    
+    // Taxonomy prompts setting
+    register_setting('openai_tag_suggester_options', 'openai_tag_suggester_taxonomy_prompts', array(
+        'sanitize_callback' => 'openai_tag_suggester_sanitize_taxonomy_prompts',
+        'default' => array()
+    ));
+    
+    // Content sources setting
+    register_setting('openai_tag_suggester_options', 'openai_tag_suggester_content_sources', array(
+        'sanitize_callback' => 'openai_tag_suggester_sanitize_content_sources',
+        'default' => array('post_content')
+    ));
+    
+    // Post types to scan for meta fields
+    register_setting('openai_tag_suggester_options', 'openai_tag_suggester_post_types_to_scan', array(
+        'sanitize_callback' => 'openai_tag_suggester_sanitize_post_types',
+        'default' => array()
+    ));
+    
+    // Debug mode for meta field detection
+    register_setting('openai_tag_suggester_options', 'openai_tag_suggester_meta_debug_mode', array(
+        'type' => 'boolean',
+        'default' => false
+    ));
+    
     // Add settings sections
     add_settings_section(
-        'openai_tag_suggester_main',
-        'Main Settings',
-        null,
+        'openai_tag_suggester_api_section',
+        'API Settings',
+        'openai_tag_suggester_api_section_callback',
         'openai_tag_suggester'
     );
-
+    
     add_settings_section(
-        'openai_tag_suggester_taxonomies',
+        'openai_tag_suggester_taxonomies_section',
         'Taxonomy Settings',
         'openai_tag_suggester_taxonomies_section_callback',
         'openai_tag_suggester'
     );
-
-    // Add Content Sources section
+    
     add_settings_section(
-        'openai_tag_suggester_content_sources',
-        'Tag Generation Sources',
+        'openai_tag_suggester_content_sources_section',
+        'Content Sources',
         'openai_tag_suggester_content_sources_section_callback',
         'openai_tag_suggester'
     );
-
+    
+    add_settings_section(
+        'openai_tag_suggester_meta_fields_section',
+        'Meta Field Detection Settings',
+        'openai_tag_suggester_meta_fields_section_callback',
+        'openai_tag_suggester'
+    );
+    
     // Add settings fields
     add_settings_field(
         'openai_tag_suggester_api_key',
         'OpenAI API Key',
         'openai_tag_suggester_api_key_field',
         'openai_tag_suggester',
-        'openai_tag_suggester_main'
+        'openai_tag_suggester_api_section'
     );
-
+    
     add_settings_field(
         'openai_tag_suggester_model',
-        'Model',
+        'OpenAI Model',
         'openai_tag_suggester_model_field',
         'openai_tag_suggester',
-        'openai_tag_suggester_main'
+        'openai_tag_suggester_api_section'
     );
-
+    
     add_settings_field(
         'openai_tag_suggester_system_role',
         'System Role Prompt',
         'openai_tag_suggester_system_role_field',
         'openai_tag_suggester',
-        'openai_tag_suggester_main'
+        'openai_tag_suggester_api_section'
     );
-
+    
     add_settings_field(
         'openai_tag_suggester_user_role',
         'User Role Prompt',
         'openai_tag_suggester_user_role_field',
         'openai_tag_suggester',
-        'openai_tag_suggester_main'
+        'openai_tag_suggester_api_section'
     );
-
+    
     add_settings_field(
         'openai_tag_suggester_enabled_taxonomies',
         'Enabled Taxonomies',
         'openai_tag_suggester_enabled_taxonomies_field',
         'openai_tag_suggester',
-        'openai_tag_suggester_taxonomies'
+        'openai_tag_suggester_taxonomies_section'
     );
     
     add_settings_field(
@@ -157,23 +160,27 @@ function openai_tag_suggester_settings() {
         'Content Sources',
         'openai_tag_suggester_content_sources_field',
         'openai_tag_suggester',
-        'openai_tag_suggester_content_sources'
+        'openai_tag_suggester_content_sources_section'
+    );
+    
+    add_settings_field(
+        'openai_tag_suggester_post_types_to_scan',
+        'Post Types to Scan for Meta Fields',
+        'openai_tag_suggester_post_types_field',
+        'openai_tag_suggester',
+        'openai_tag_suggester_meta_fields_section'
     );
 }
 
 // Add section description callback
 function openai_tag_suggester_taxonomies_section_callback() {
-    echo '<div class="taxonomy-section-description">';
-    echo '<p>Select which taxonomies should be available for tag suggestions. The plugin will detect all taxonomies registered on your site.</p>';
-    echo '<p>For each enabled taxonomy, you can optionally create a custom prompt that will be used specifically when generating suggestions for that taxonomy.</p>';
-    echo '<p><strong>Tips:</strong></p>';
-    echo '<ul style="list-style-type: disc; margin-left: 20px;">';
-    echo '<li>Use the search box to quickly find specific taxonomies</li>';
-    echo '<li>Taxonomies are grouped by post type for easier navigation</li>';
-    echo '<li>Custom prompts can include specific instructions for each taxonomy (e.g., "Suggest 5 tags related to technology")</li>';
-    echo '<li>Leave the custom prompt field empty to use the default prompt</li>';
-    echo '</ul>';
-    echo '</div>';
+    echo '<p>Select which taxonomies should be available for AI tag suggestions. The plugin will add a meta box for each enabled taxonomy.</p>';
+}
+
+// API section callback
+function openai_tag_suggester_api_section_callback() {
+    echo '<p>Configure your OpenAI API settings and prompts for tag generation.</p>';
+    echo '<p>The System Role defines how the AI should behave, while the User Role provides specific instructions for tag generation.</p>';
 }
 
 // Add content sources section description callback
@@ -191,6 +198,581 @@ function openai_tag_suggester_content_sources_section_callback() {
     echo '</div>';
 }
 
+// Meta fields section callback
+function openai_tag_suggester_meta_fields_section_callback() {
+    echo '<div class="meta-fields-section-description">';
+    echo '<p>Configure how the plugin detects and uses meta fields across your site.</p>';
+    echo '<p>Limiting the post types to scan can improve performance on large sites with many custom fields.</p>';
+    echo '<p><strong>Tips:</strong></p>';
+    echo '<ul style="list-style-type: disc; margin-left: 20px;">';
+    echo '<li>If no post types are selected, all public post types will be scanned</li>';
+    echo '<li>The meta field cache is refreshed hourly to ensure new fields are detected</li>';
+    echo '<li>Memory usage is optimized to prevent performance issues on large sites</li>';
+    echo '</ul>';
+    echo '</div>';
+    
+    // Add debug mode toggle
+    $debug_mode = get_option('openai_tag_suggester_meta_debug_mode', false);
+    echo '<div class="debug-mode-toggle" style="margin-top: 15px; margin-bottom: 15px; padding: 10px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">';
+    echo '<label for="openai_tag_suggester_meta_debug_mode">';
+    echo '<input type="checkbox" id="openai_tag_suggester_meta_debug_mode" name="openai_tag_suggester_meta_debug_mode" value="1" ' . checked(1, $debug_mode, false) . '> ';
+    echo 'Enable Debug Mode for Meta Field Detection';
+    echo '</label>';
+    echo '<p class="description" style="margin-top: 5px;">When enabled, detailed debug information will be shown about the meta field detection process.</p>';
+    echo '</div>';
+    
+    // Direct database check for meta fields
+    global $wpdb;
+    $meta_count = $wpdb->get_var("SELECT COUNT(DISTINCT meta_key) FROM {$wpdb->postmeta} WHERE meta_key NOT LIKE '\_%'");
+    $sample_meta_keys = $wpdb->get_col("SELECT DISTINCT meta_key FROM {$wpdb->postmeta} WHERE meta_key NOT LIKE '\_%' LIMIT 10");
+    
+    // Also check for internal meta keys (starting with underscore)
+    $internal_meta_count = $wpdb->get_var("SELECT COUNT(DISTINCT meta_key) FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_%'");
+    $sample_internal_meta_keys = $wpdb->get_col("SELECT DISTINCT meta_key FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_%' LIMIT 10");
+    
+    // Get all meta keys for a specific post type
+    $faculty_meta_keys = array();
+    $faculty_posts = $wpdb->get_col("SELECT ID FROM {$wpdb->posts} WHERE post_type = 'faculty_success' LIMIT 1");
+    if (!empty($faculty_posts)) {
+        $faculty_post_id = $faculty_posts[0];
+        $faculty_meta_keys = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT meta_key FROM {$wpdb->postmeta} WHERE post_id = %d",
+            $faculty_post_id
+        ));
+    }
+    
+    echo '<div class="direct-db-check" style="margin-top: 15px; padding: 10px; background-color: #f0f7f4; border: 1px solid #005035; border-radius: 4px;">';
+    echo '<h4 style="margin-top: 0; color: #005035;">Database Check</h4>';
+    echo '<p>Direct database query found <strong>' . intval($meta_count) . '</strong> distinct meta keys in your database.</p>';
+    
+    if (!empty($sample_meta_keys)) {
+        echo '<p>Sample meta keys found in database:</p>';
+        echo '<ul style="margin-left: 20px; list-style-type: disc;">';
+        foreach ($sample_meta_keys as $key) {
+            echo '<li>' . esc_html($key) . '</li>';
+        }
+        echo '</ul>';
+    } else {
+        echo '<p>No meta keys found in your database. This could indicate that your site doesn\'t use custom fields or there\'s an issue with the database.</p>';
+    }
+    
+    echo '</div>';
+    
+    // Show internal meta keys
+    if (!empty($sample_internal_meta_keys)) {
+        echo '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">';
+        echo '<p>Found <strong>' . intval($internal_meta_count) . '</strong> internal meta keys (starting with underscore):</p>';
+        echo '<ul style="margin-left: 20px; list-style-type: disc;">';
+        foreach ($sample_internal_meta_keys as $key) {
+            echo '<li>' . esc_html($key) . '</li>';
+        }
+        echo '</ul>';
+        echo '</div>';
+    }
+    
+    // Show meta keys for faculty_success post type
+    if (!empty($faculty_meta_keys)) {
+        echo '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">';
+        echo '<p>Meta keys for faculty_success post (ID: ' . $faculty_post_id . '):</p>';
+        echo '<ul style="margin-left: 20px; list-style-type: disc;">';
+        foreach ($faculty_meta_keys as $key) {
+            echo '<li>' . esc_html($key) . '</li>';
+        }
+        echo '</ul>';
+        echo '</div>';
+    }
+    
+    echo '</div>';
+    
+    // Add buttons to manually clear the meta fields cache and perform a scan
+    echo '<div class="clear-cache-container" style="margin-top: 15px;">';
+    echo '<button type="button" id="scan-meta-fields" class="button button-primary">Scan Meta Fields Now</button> ';
+    echo '<button type="button" id="clear-meta-fields-cache" class="button">Clear Meta Fields Cache</button>';
+    echo '<span id="cache-cleared-message" style="display: none; margin-left: 10px; color: green;">Cache cleared successfully!</span>';
+    echo '<span id="scan-complete-message" style="display: none; margin-left: 10px; color: green;">Scan completed successfully!</span>';
+    echo '</div>';
+    
+    // Display current meta fields if they exist
+    $meta_fields = get_transient('openai_tag_suggester_meta_fields_cache');
+    if (is_array($meta_fields) && !empty($meta_fields)) {
+        echo '<div class="current-meta-fields" style="margin-top: 15px;">';
+        echo '<h4>Currently Detected Meta Fields (' . count($meta_fields) . ')</h4>';
+        echo '<div class="meta-fields-list" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-top: 10px; background-color: #f9f9f9;">';
+        
+        foreach ($meta_fields as $meta_field) {
+            echo '<div class="meta-field-item">' . esc_html($meta_field) . '</div>';
+        }
+        
+        echo '</div>';
+        echo '</div>';
+    } else {
+        echo '<div class="no-meta-fields" style="margin-top: 15px; font-style: italic;">';
+        echo 'No meta fields have been detected yet. Click "Scan Meta Fields Now" to perform a scan.';
+        echo '</div>';
+    }
+    
+    // Display debug information if debug mode is enabled
+    if ($debug_mode) {
+        // Get debug log
+        $debug_log = get_option('openai_tag_suggester_meta_debug_log', array());
+        
+        echo '<div class="meta-fields-debug" style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; background-color: #f0f0f0; border-radius: 4px;">';
+        echo '<h4 style="margin-top: 0; color: #333;">Debug Information</h4>';
+        
+        if (!empty($debug_log)) {
+            echo '<div class="debug-log" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background-color: #fff; font-family: monospace; font-size: 12px;">';
+            foreach ($debug_log as $log_entry) {
+                echo '<div class="debug-log-entry">' . esc_html($log_entry) . '</div>';
+            }
+            echo '</div>';
+        } else {
+            echo '<p>No debug information available. Run a scan to generate debug information.</p>';
+        }
+        
+        echo '</div>';
+    }
+    
+    // Add JavaScript for the buttons
+    echo '<script>
+        jQuery(document).ready(function($) {
+            $("#clear-meta-fields-cache").on("click", function() {
+                $(this).prop("disabled", true).text("Clearing...");
+                $.ajax({
+                    url: ajaxurl,
+                    type: "POST",
+                    data: {
+                        action: "openai_tag_suggester_clear_cache",
+                        nonce: "' . wp_create_nonce('openai_tag_suggester_clear_cache') . '"
+                    },
+                    success: function(response) {
+                        $("#clear-meta-fields-cache").prop("disabled", false).text("Clear Meta Fields Cache");
+                        if (response.success) {
+                            $("#cache-cleared-message").fadeIn().delay(3000).fadeOut();
+                            // Reload the page to show updated meta fields list
+                            location.reload();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Clear cache error:", status, error);
+                        alert("Error clearing cache: " + error);
+                        $("#clear-meta-fields-cache").prop("disabled", false).text("Clear Meta Fields Cache");
+                    }
+                });
+            });
+            
+            $("#scan-meta-fields").on("click", function() {
+                console.log("Scan button clicked");
+                $(this).prop("disabled", true).text("Scanning...");
+                
+                // Add a status message
+                if ($("#scan-status").length === 0) {
+                    $("<div id=\'scan-status\' style=\'margin-top: 10px; padding: 5px; background-color: #f0f0f0; border: 1px solid #ddd;\'>Starting scan...</div>").insertAfter(this);
+                } else {
+                    $("#scan-status").text("Starting scan...").show();
+                }
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: "POST",
+                    data: {
+                        action: "openai_tag_suggester_scan_meta_fields",
+                        nonce: "' . wp_create_nonce('openai_tag_suggester_scan_meta_fields') . '"
+                    },
+                    success: function(response) {
+                        console.log("Scan response:", response);
+                        $("#scan-meta-fields").prop("disabled", false).text("Scan Meta Fields Now");
+                        $("#scan-status").text("Scan completed. Found " + (response.data && response.data.count ? response.data.count : 0) + " meta fields.").show();
+                        
+                        if (response.success) {
+                            $("#scan-complete-message").fadeIn().delay(3000).fadeOut();
+                            // Reload the page to show updated meta fields list
+                            setTimeout(function() {
+                                location.reload();
+                            }, 1000);
+                        } else {
+                            $("#scan-status").text("Scan failed: " + (response.data || "Unknown error")).show();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Scan error:", xhr.responseText, status, error);
+                        $("#scan-meta-fields").prop("disabled", false).text("Scan Meta Fields Now");
+                        $("#scan-status").text("Error during scan: " + error + ". Check browser console for details.").show();
+                        
+                        // Try to parse the response for more details
+                        try {
+                            var responseJson = JSON.parse(xhr.responseText);
+                            console.log("Parsed error response:", responseJson);
+                        } catch(e) {
+                            console.log("Raw error response:", xhr.responseText);
+                        }
+                    }
+                });
+            });
+            
+        });
+    </script>';
+}
+
+// Post types field renderer
+function openai_tag_suggester_post_types_field() {
+    $selected_post_types = get_option('openai_tag_suggester_post_types_to_scan', array());
+    $post_types = get_post_types(array('public' => true), 'objects');
+    
+    echo '<div class="post-types-container">';
+    echo '<p class="description">Select which post types should be scanned for meta fields. If none are selected, all public post types will be scanned.</p>';
+    
+    if (!empty($post_types)) {
+        echo '<div class="post-types-list" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-top: 10px;">';
+        
+        foreach ($post_types as $post_type) {
+            $checked = in_array($post_type->name, $selected_post_types) ? 'checked' : '';
+            
+            echo '<div class="post-type-item">';
+            echo '<label>';
+            echo '<input type="checkbox" name="openai_tag_suggester_post_types_to_scan[]" value="' . esc_attr($post_type->name) . '" ' . $checked . '>';
+            echo ' ' . esc_html($post_type->label) . ' (' . esc_html($post_type->name) . ')';
+            echo '</label>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
+        
+        // Add select all/none buttons for post types
+        echo '<div class="post-type-controls" style="margin-top: 5px;">';
+        echo '<button type="button" class="button select-all-post-types">Select All</button> ';
+        echo '<button type="button" class="button select-none-post-types">Select None</button>';
+        echo '</div>';
+        
+        // Add JavaScript for select all/none functionality
+        echo '<script>
+            jQuery(document).ready(function($) {
+                $(".select-all-post-types").on("click", function(e) {
+                    e.preventDefault();
+                    $(".post-types-list input[type=checkbox]").prop("checked", true);
+                });
+                
+                $(".select-none-post-types").on("click", function(e) {
+                    e.preventDefault();
+                    $(".post-types-list input[type=checkbox]").prop("checked", false);
+                });
+            });
+        </script>';
+    } else {
+        echo '<p><em>No public post types found.</em></p>';
+    }
+    
+    echo '</div>';
+}
+
+// Function to scan and detect all active meta fields across the site
+function openai_tag_suggester_get_meta_fields() {
+    // Initialize debug log
+    $debug_log = array();
+    $debug_mode = get_option('openai_tag_suggester_meta_debug_mode', false);
+    
+    $debug_log[] = date('[Y-m-d H:i:s]') . ' Starting meta field scan...';
+    
+    // Check if we have cached meta fields and they're not expired
+    $cached_meta_fields = get_transient('openai_tag_suggester_meta_fields_cache');
+    if (false !== $cached_meta_fields && !isset($_POST['force_scan'])) {
+        $debug_log[] = 'Using cached meta fields (' . count($cached_meta_fields) . ' fields)';
+        
+        if ($debug_mode) {
+            update_option('openai_tag_suggester_meta_debug_log', $debug_log);
+        }
+        
+        return $cached_meta_fields;
+    }
+    
+    // Get post types to scan from settings, default to all public post types if not set
+    $post_types_to_scan = get_option('openai_tag_suggester_post_types_to_scan', array());
+    if (empty($post_types_to_scan)) {
+        $all_post_types = get_post_types(array('public' => true), 'names');
+        $post_types_to_scan = array_keys($all_post_types);
+        $debug_log[] = 'No post types selected, scanning all public post types: ' . implode(', ', $post_types_to_scan);
+    } else {
+        $debug_log[] = 'Scanning selected post types: ' . implode(', ', $post_types_to_scan);
+    }
+    
+    // Initialize meta keys array
+    $meta_keys = array();
+    
+    // Memory usage tracking
+    $initial_memory = memory_get_usage();
+    $memory_limit = wp_convert_hr_to_bytes(ini_get('memory_limit')) * 0.8; // Use 80% of available memory as limit
+    $debug_log[] = 'Memory limit: ' . size_format($memory_limit) . ', Initial memory usage: ' . size_format($initial_memory);
+    
+    // Method 1: Get registered meta keys using WordPress API
+    $registered_meta = get_registered_meta_keys('post');
+    if (!empty($registered_meta)) {
+        $debug_log[] = 'Found ' . count($registered_meta) . ' registered meta keys via get_registered_meta_keys()';
+        foreach ($registered_meta as $meta_key => $meta_data) {
+            // Skip internal meta keys
+            if (substr($meta_key, 0, 1) === '_') {
+                continue;
+            }
+            
+            // Add to our list if not already there
+            if (!in_array($meta_key, $meta_keys)) {
+                $meta_keys[] = $meta_key;
+                $debug_log[] = 'Added registered meta key: ' . $meta_key;
+            }
+        }
+    } else {
+        $debug_log[] = 'No registered meta keys found via get_registered_meta_keys()';
+    }
+    
+    // Method 2: Direct database query to find meta keys
+    global $wpdb;
+    $query = "
+        SELECT DISTINCT meta_key 
+        FROM {$wpdb->postmeta} 
+        WHERE meta_key NOT LIKE '\_%' 
+        ORDER BY meta_key
+    ";
+    
+    $db_meta_keys = $wpdb->get_col($query);
+    if (!empty($db_meta_keys)) {
+        $debug_log[] = 'Found ' . count($db_meta_keys) . ' meta keys via direct database query';
+        foreach ($db_meta_keys as $meta_key) {
+            if (!in_array($meta_key, $meta_keys)) {
+                $meta_keys[] = $meta_key;
+                if ($debug_mode) {
+                    $debug_log[] = 'Added meta key from database: ' . $meta_key;
+                }
+            }
+        }
+    } else {
+        $debug_log[] = 'No meta keys found via direct database query';
+    }
+    
+    // Method 3: Check for Advanced Custom Fields if the plugin is active
+    if (function_exists('acf_get_field_groups')) {
+        $debug_log[] = 'ACF is active, checking for ACF fields';
+        $field_groups = acf_get_field_groups();
+        $debug_log[] = 'Found ' . count($field_groups) . ' ACF field groups';
+        
+        foreach ($field_groups as $field_group) {
+            $fields = acf_get_fields($field_group);
+            
+            if (!empty($fields)) {
+                $debug_log[] = 'Found ' . count($fields) . ' fields in group: ' . $field_group['title'];
+                foreach ($fields as $field) {
+                    if (!in_array($field['name'], $meta_keys)) {
+                        $meta_keys[] = $field['name'];
+                        $debug_log[] = 'Added ACF field: ' . $field['name'] . ' (' . $field['label'] . ')';
+                    }
+                }
+            }
+        }
+    } else {
+        $debug_log[] = 'ACF is not active';
+    }
+    
+    // Method 4: For each post type, get a sample of posts and their meta keys
+    foreach ($post_types_to_scan as $post_type) {
+        // Check memory usage and break if we're approaching the limit
+        if (memory_get_usage() > $memory_limit) {
+            $debug_log[] = 'Memory limit approaching, stopping meta field scan';
+            break;
+        }
+        
+        $debug_log[] = "Scanning post type: $post_type";
+        
+        // Get a larger sample of posts for this type
+        $posts = get_posts(array(
+            'post_type' => $post_type,
+            'posts_per_page' => 10, // Increased from 5 to 10
+            'orderby' => 'date',
+            'order' => 'DESC',
+        ));
+        
+        if (!empty($posts)) {
+            $debug_log[] = "Found " . count($posts) . " posts of type $post_type";
+            foreach ($posts as $post) {
+                // Check memory usage again
+                if (memory_get_usage() > $memory_limit) {
+                    $debug_log[] = 'Memory limit approaching, breaking scan loop';
+                    break 2; // Break out of both loops
+                }
+                
+                // Get meta keys for this post
+                $post_meta_keys = get_post_custom_keys($post->ID);
+                
+                // Check if get_post_custom_keys returned null or false
+                if ($post_meta_keys === null || $post_meta_keys === false) {
+                    $debug_log[] = "get_post_custom_keys returned " . ($post_meta_keys === null ? "null" : "false") . " for post ID {$post->ID}";
+                    
+                    // Try alternative method to get meta keys
+                    $debug_log[] = "Trying alternative method to get meta keys for post ID {$post->ID}";
+                    global $wpdb;
+                    $post_meta_keys = $wpdb->get_col($wpdb->prepare(
+                        "SELECT DISTINCT meta_key FROM {$wpdb->postmeta} WHERE post_id = %d",
+                        $post->ID
+                    ));
+                }
+                
+                if (!empty($post_meta_keys)) {
+                    $debug_log[] = "Found " . count($post_meta_keys) . " meta keys for post ID {$post->ID}";
+                    
+                    // For debugging, show all meta keys found for this post
+                    if ($debug_mode) {
+                        $debug_log[] = "All meta keys for post {$post->ID}: " . implode(", ", $post_meta_keys);
+                    }
+                    
+                    foreach ($post_meta_keys as $meta_key) {
+                        // Skip internal meta keys
+                        if (substr($meta_key, 0, 1) === '_') {
+                            if ($debug_mode) {
+                                $debug_log[] = "Skipping internal meta key: " . $meta_key;
+                            }
+                            continue;
+                        }
+                        
+                        // Add to our list if not already there
+                        if (!in_array($meta_key, $meta_keys)) {
+                            $meta_keys[] = $meta_key;
+                            $debug_log[] = "Added meta key from post {$post->ID}: " . $meta_key;
+                        } else {
+                            if ($debug_mode) {
+                                $debug_log[] = "Meta key already in list: " . $meta_key;
+                            }
+                        }
+                    }
+                } else {
+                    $debug_log[] = "No meta keys found for post ID {$post->ID}";
+                }
+            }
+        } else {
+            $debug_log[] = "No posts found for post type $post_type";
+        }
+    }
+    
+    // Method 5: Check for common meta keys used by popular plugins
+    $common_meta_keys = array(
+        'subtitle', 'excerpt', 'secondary_title', 'seo_title', 'seo_description',
+        'featured_image_alt', 'featured_image_caption', 'author_bio', 'page_template',
+        'custom_css', 'custom_js', 'video_url', 'audio_url', 'gallery_images',
+        'related_posts', 'post_views', 'post_likes', 'post_shares', 'post_rating',
+        'event_date', 'event_location', 'event_organizer', 'product_price', 'product_sku',
+        'product_stock', 'download_count', 'attachment_url', 'attachment_description'
+    );
+    
+    $debug_log[] = "Checking for " . count($common_meta_keys) . " common meta keys";
+    $found_common_keys = 0;
+    
+    foreach ($common_meta_keys as $meta_key) {
+        if (!in_array($meta_key, $meta_keys)) {
+            // Check if this meta key exists in the database
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = %s LIMIT 1",
+                $meta_key
+            ));
+            
+            if ($exists) {
+                $meta_keys[] = $meta_key;
+                $found_common_keys++;
+                $debug_log[] = "Added common meta key: " . $meta_key;
+            }
+        }
+    }
+    
+    $debug_log[] = "Found $found_common_keys common meta keys";
+    
+    // Method 6: Manually add faculty_success meta fields
+    if (in_array('faculty_success', $post_types_to_scan)) {
+        $debug_log[] = "Manually checking for faculty_success meta fields";
+        
+        // Get all meta keys for faculty_success posts directly from the database
+        // Include underscore-prefixed fields specifically for faculty_success
+        $faculty_meta_keys = $wpdb->get_col("
+            SELECT DISTINCT pm.meta_key 
+            FROM {$wpdb->postmeta} pm
+            JOIN {$wpdb->posts} p ON pm.post_id = p.ID
+            WHERE p.post_type = 'faculty_success'
+        ");
+        
+        if (!empty($faculty_meta_keys)) {
+            $debug_log[] = "Found " . count($faculty_meta_keys) . " faculty_success meta keys in database";
+            
+            foreach ($faculty_meta_keys as $meta_key) {
+                // For faculty meta fields, include those with underscores but exclude WordPress internal ones
+                $is_wp_internal = in_array($meta_key, array('_edit_lock', '_edit_last', '_wp_page_template', '_wp_trash_meta_status', '_wp_trash_meta_time'));
+                
+                if (strpos($meta_key, '_faculty_') === 0 || strpos($meta_key, '_search_') === 0) {
+                    // Remove the leading underscore for display and usage
+                    $display_key = substr($meta_key, 1);
+                    
+                    if (!in_array($display_key, $meta_keys) && !$is_wp_internal) {
+                        $meta_keys[] = $display_key;
+                        $debug_log[] = "Added faculty_success meta key (without underscore): " . $display_key . " (original: " . $meta_key . ")";
+                    }
+                } elseif (!in_array($meta_key, $meta_keys) && substr($meta_key, 0, 1) !== '_') {
+                    // For non-underscore keys, add them normally
+                    $meta_keys[] = $meta_key;
+                    $debug_log[] = "Added faculty_success meta key: " . $meta_key;
+                }
+            }
+        } else {
+            $debug_log[] = "No faculty_success meta keys found in database";
+        }
+        
+        // Hardcoded common faculty_success meta fields
+        $faculty_common_fields = array(
+            'faculty_name', 'faculty_title', 'faculty_department', 'faculty_email',
+            'faculty_phone', 'faculty_office', 'faculty_bio', 'faculty_research',
+            'faculty_education', 'faculty_publications', 'faculty_awards',
+            'faculty_courses', 'faculty_expertise', 'faculty_website'
+        );
+        
+        $debug_log[] = "Checking for " . count($faculty_common_fields) . " common faculty meta fields";
+        $found_faculty_fields = 0;
+        
+        foreach ($faculty_common_fields as $meta_key) {
+            if (!in_array($meta_key, $meta_keys)) {
+                // Check if this meta key exists in the database
+                $exists = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = %s LIMIT 1",
+                    $meta_key
+                ));
+                
+                if ($exists) {
+                    $meta_keys[] = $meta_key;
+                    $found_faculty_fields++;
+                    $debug_log[] = "Added faculty meta key: " . $meta_key;
+                }
+            }
+        }
+        
+        $debug_log[] = "Found $found_faculty_fields common faculty meta fields";
+    }
+    
+    // Sort meta keys alphabetically
+    sort($meta_keys);
+    
+    $debug_log[] = 'Final meta keys count: ' . count($meta_keys);
+    
+    // Cache the results for 1 hour (3600 seconds)
+    set_transient('openai_tag_suggester_meta_fields_cache', $meta_keys, 3600);
+    
+    // Log memory usage for debugging
+    $memory_used = memory_get_usage() - $initial_memory;
+    $debug_log[] = sprintf('Meta field scan used %s of memory, found %d meta fields', 
+        size_format($memory_used), count($meta_keys));
+    
+    // Save debug log if debug mode is enabled
+    if ($debug_mode) {
+        update_option('openai_tag_suggester_meta_debug_log', $debug_log);
+    }
+    
+    return $meta_keys;
+}
+
+// Function to clear the meta fields cache
+function openai_tag_suggester_clear_meta_fields_cache() {
+    delete_transient('openai_tag_suggester_meta_fields_cache');
+}
+
 // Add content sources field renderer
 function openai_tag_suggester_content_sources_field() {
     $content_sources = get_option('openai_tag_suggester_content_sources', array('post_content'));
@@ -206,48 +788,91 @@ function openai_tag_suggester_content_sources_field() {
     echo '</label>';
     echo '</div>';
     
-    // Get all registered post types
-    $post_types = get_post_types(array('public' => true), 'objects');
+    // Add general select all/none buttons
+    echo '<div class="meta-field-controls general-controls">';
+    echo '<button type="button" class="button select-all-meta-fields">Select All Meta Fields</button> ';
+    echo '<button type="button" class="button select-none-meta-fields">Select None</button>';
+    echo '</div>';
     
-    // Get all meta keys for all post types
-    $meta_keys = array();
+    // Get all meta keys using our optimized function
+    $meta_fields = get_transient('openai_tag_suggester_meta_fields_cache');
+    
+    // If cache is empty, run the scan
+    if (empty($meta_fields)) {
+        $meta_fields = openai_tag_suggester_get_meta_fields();
+    }
+    
+    // Group meta fields by post type
+    $grouped_meta_fields = array(
+        'faculty_success' => array(),
+        'post' => array(),
+        'page' => array(),
+        'other' => array()
+    );
+    
+    // Get meta fields for each post type directly from the database
+    global $wpdb;
+    $post_types = get_post_types(array('public' => true), 'names');
+    
     foreach ($post_types as $post_type) {
-        $post_type_name = $post_type->name;
+        // Skip attachment post type
+        if ($post_type === 'attachment') {
+            continue;
+        }
         
-        // Get a sample post of this type
-        $posts = get_posts(array(
-            'post_type' => $post_type_name,
-            'posts_per_page' => 1,
-        ));
+        // Get meta keys for this post type
+        $post_type_meta_keys = $wpdb->get_col("
+            SELECT DISTINCT pm.meta_key 
+            FROM {$wpdb->postmeta} pm
+            JOIN {$wpdb->posts} p ON pm.post_id = p.ID
+            WHERE p.post_type = '{$post_type}'
+            AND pm.meta_key NOT LIKE '\_%'
+        ");
         
-        if (!empty($posts)) {
-            $post_id = $posts[0]->ID;
-            $post_meta_keys = get_post_custom_keys($post_id);
-            
-            if ($post_meta_keys) {
-                foreach ($post_meta_keys as $meta_key) {
-                    // Skip internal meta keys
-                    if (substr($meta_key, 0, 1) === '_') {
-                        continue;
-                    }
-                    
-                    // Add to our list if not already there
-                    if (!in_array($meta_key, $meta_keys)) {
-                        $meta_keys[] = $meta_key;
-                    }
-                }
+        // Add to grouped meta fields
+        if (!isset($grouped_meta_fields[$post_type])) {
+            $grouped_meta_fields[$post_type] = array();
+        }
+        
+        foreach ($post_type_meta_keys as $meta_key) {
+            if (!in_array($meta_key, $grouped_meta_fields[$post_type])) {
+                $grouped_meta_fields[$post_type][] = $meta_key;
             }
         }
     }
     
-    // Sort meta keys alphabetically
-    sort($meta_keys);
-    
-    if (!empty($meta_keys)) {
-        echo '<h4>Meta Fields</h4>';
-        echo '<div class="meta-fields-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-top: 10px;">';
+    // Add any remaining meta fields to 'other'
+    foreach ($meta_fields as $meta_key) {
+        $found = false;
+        foreach ($grouped_meta_fields as $post_type => $post_type_meta_keys) {
+            if (in_array($meta_key, $post_type_meta_keys)) {
+                $found = true;
+                break;
+            }
+        }
         
-        foreach ($meta_keys as $meta_key) {
+        if (!$found) {
+            $grouped_meta_fields['other'][] = $meta_key;
+        }
+    }
+    
+    // Display meta fields grouped by post type
+    foreach ($grouped_meta_fields as $post_type => $post_type_meta_keys) {
+        if (empty($post_type_meta_keys)) {
+            continue;
+        }
+        
+        // Get post type label
+        $post_type_obj = get_post_type_object($post_type);
+        $post_type_label = $post_type_obj ? $post_type_obj->labels->singular_name : ucfirst($post_type);
+        
+        echo '<h4>' . esc_html($post_type_label) . ' Meta Fields</h4>';
+        echo '<div class="meta-fields-container post-type-' . esc_attr($post_type) . '">';
+        
+        // Sort meta keys alphabetically
+        sort($post_type_meta_keys);
+        
+        foreach ($post_type_meta_keys as $meta_key) {
             $field_id = 'meta_' . sanitize_key($meta_key);
             
             echo '<div class="content-source-item">';
@@ -261,29 +886,51 @@ function openai_tag_suggester_content_sources_field() {
         
         echo '</div>';
         
-        // Add select all/none buttons for meta fields
-        echo '<div class="meta-field-controls" style="margin-top: 5px;">';
-        echo '<button type="button" class="button select-all-meta-fields">Select All Meta Fields</button> ';
-        echo '<button type="button" class="button select-none-meta-fields">Select None</button>';
+        // Add select all/none buttons for this post type's meta fields
+        echo '<div class="meta-field-controls">';
+        echo '<button type="button" class="button select-all-' . esc_attr($post_type) . '-meta-fields">Select All ' . esc_html($post_type_label) . ' Fields</button> ';
+        echo '<button type="button" class="button select-none-' . esc_attr($post_type) . '-meta-fields">Select None</button>';
         echo '</div>';
-        
-        // Add JavaScript for select all/none functionality
-        echo '<script>
-            jQuery(document).ready(function($) {
-                $(".select-all-meta-fields").on("click", function(e) {
-                    e.preventDefault();
-                    $(".meta-fields-container input[type=checkbox]").prop("checked", true);
-                });
-                
-                $(".select-none-meta-fields").on("click", function(e) {
-                    e.preventDefault();
-                    $(".meta-fields-container input[type=checkbox]").prop("checked", false);
-                });
-            });
-        </script>';
-    } else {
-        echo '<p><em>No meta fields found. Add custom fields to your posts to see them here.</em></p>';
     }
+    
+    // Add JavaScript for select all/none functionality
+    echo '<script>
+        jQuery(document).ready(function($) {
+            // General select all/none buttons
+            $(".select-all-meta-fields").on("click", function(e) {
+                e.preventDefault();
+                $(".meta-fields-container input[type=checkbox]").prop("checked", true);
+            });
+            
+            $(".select-none-meta-fields").on("click", function(e) {
+                e.preventDefault();
+                $(".meta-fields-container input[type=checkbox]").prop("checked", false);
+            });
+            
+            // Post type specific select all/none buttons
+            ';
+    
+    foreach ($grouped_meta_fields as $post_type => $post_type_meta_keys) {
+        if (empty($post_type_meta_keys)) {
+            continue;
+        }
+        
+        echo '
+            $(".select-all-' . esc_attr($post_type) . '-meta-fields").on("click", function(e) {
+                e.preventDefault();
+                $(".post-type-' . esc_attr($post_type) . ' input[type=checkbox]").prop("checked", true);
+            });
+            
+            $(".select-none-' . esc_attr($post_type) . '-meta-fields").on("click", function(e) {
+                e.preventDefault();
+                $(".post-type-' . esc_attr($post_type) . ' input[type=checkbox]").prop("checked", false);
+            });
+        ';
+    }
+    
+    echo '
+        });
+    </script>';
     
     echo '</div>';
 }
@@ -1458,12 +2105,40 @@ function openai_tag_suggester_generate_tags_ajax() {
             $combined_content .= "POST CONTENT:\n" . $post_content . "\n\n";
         } else {
             // This is a meta field
-            $meta_value = get_post_meta($post_id, $source, true);
+            $meta_value = openai_tag_suggester_get_faculty_meta($post_id, $source);
             
             if (!empty($meta_value)) {
-                // If it's an array or object, convert to string
+                // Sanitize meta value based on its type
                 if (is_array($meta_value) || is_object($meta_value)) {
+                    // Convert arrays and objects to a readable string format
                     $meta_value = print_r($meta_value, true);
+                    // Sanitize the resulting string
+                    $meta_value = sanitize_textarea_field($meta_value);
+                } elseif (is_numeric($meta_value)) {
+                    // Keep numeric values as is
+                    $meta_value = (string) $meta_value;
+                } elseif (is_string($meta_value)) {
+                    // Sanitize string values
+                    // Check if it looks like HTML content
+                    if (strpos($meta_value, '<') !== false && strpos($meta_value, '>') !== false) {
+                        // It might be HTML, use wp_kses_post to preserve structure but remove unsafe elements
+                        $meta_value = wp_kses_post($meta_value);
+                        // Convert to plain text for better AI processing
+                        $meta_value = wp_strip_all_tags($meta_value);
+                    } else {
+                        // Regular string, use standard sanitization
+                        $meta_value = sanitize_textarea_field($meta_value);
+                    }
+                } else {
+                    // For any other type, convert to string and sanitize
+                    $meta_value = sanitize_textarea_field((string) $meta_value);
+                }
+                
+                // Limit meta field content length to prevent excessive API usage
+                $max_meta_length = 5000; // 5000 characters max per meta field
+                if (strlen($meta_value) > $max_meta_length) {
+                    $meta_value = substr($meta_value, 0, $max_meta_length) . '... [truncated]';
+                    error_log('Meta field ' . $source . ' truncated from ' . strlen($meta_value) . ' to ' . $max_meta_length . ' chars');
                 }
                 
                 // Add to combined content with a heading
@@ -1691,6 +2366,25 @@ function openai_tag_suggester_sanitize_content_sources($sources) {
     // Ensure at least post_content is selected
     if (empty($sanitized)) {
         $sanitized[] = 'post_content';
+    }
+    
+    return $sanitized;
+}
+
+// Sanitize post types to scan
+function openai_tag_suggester_sanitize_post_types($post_types) {
+    if (!is_array($post_types)) {
+        return array();
+    }
+    
+    $sanitized = array();
+    $valid_post_types = get_post_types(array('public' => true), 'names');
+    
+    foreach ($post_types as $post_type) {
+        $post_type = sanitize_text_field($post_type);
+        if (in_array($post_type, $valid_post_types)) {
+            $sanitized[] = $post_type;
+        }
     }
     
     return $sanitized;
@@ -2075,5 +2769,127 @@ function openai_tag_suggester_admin_styles($hook) {
         ";
         wp_add_inline_style('openai-tag_suggester-admin', $custom_css);
     }
+}
+
+// AJAX handler for clearing meta fields cache
+add_action('wp_ajax_openai_tag_suggester_clear_cache', 'openai_tag_suggester_clear_cache_ajax');
+function openai_tag_suggester_clear_cache_ajax() {
+    // Verify nonce
+    check_ajax_referer('openai_tag_suggester_clear_cache', 'nonce');
+    
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Permission denied');
+        return;
+    }
+    
+    // Clear the cache
+    openai_tag_suggester_clear_meta_fields_cache();
+    
+    // Send success response
+    wp_send_json_success(array('message' => 'Meta fields cache cleared successfully'));
+}
+
+// Clear meta fields cache when a new post type is registered
+add_action('registered_post_type', 'openai_tag_suggester_clear_meta_fields_cache');
+
+// Clear meta fields cache when a post meta is added or updated
+add_action('added_post_meta', 'openai_tag_suggester_maybe_clear_meta_fields_cache', 10, 4);
+add_action('updated_post_meta', 'openai_tag_suggester_maybe_clear_meta_fields_cache', 10, 4);
+
+// Only clear cache for new meta keys to avoid clearing too often
+function openai_tag_suggester_maybe_clear_meta_fields_cache($meta_id, $object_id, $meta_key, $meta_value) {
+    // Skip internal meta keys
+    if (substr($meta_key, 0, 1) === '_') {
+        return;
+    }
+    
+    // Get cached meta fields
+    $cached_meta_fields = get_transient('openai_tag_suggester_meta_fields_cache');
+    
+    // If this is a new meta key not in our cache, clear the cache
+    if (is_array($cached_meta_fields) && !in_array($meta_key, $cached_meta_fields)) {
+        openai_tag_suggester_clear_meta_fields_cache();
+    }
+}
+
+// AJAX handler for scanning meta fields
+add_action('wp_ajax_openai_tag_suggester_scan_meta_fields', 'openai_tag_suggester_scan_meta_fields_ajax');
+function openai_tag_suggester_scan_meta_fields_ajax() {
+    // Start output buffering to catch any unexpected output
+    ob_start();
+    
+    try {
+        // Verify nonce
+        check_ajax_referer('openai_tag_suggester_scan_meta_fields', 'nonce');
+        
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permission denied');
+            return;
+        }
+        
+        // Clear the cache first
+        openai_tag_suggester_clear_meta_fields_cache();
+        
+        // Set force scan flag
+        $_POST['force_scan'] = true;
+        
+        // Enable debug mode for this scan
+        $original_debug_mode = get_option('openai_tag_suggester_meta_debug_mode', false);
+        update_option('openai_tag_suggester_meta_debug_mode', true);
+        
+        // Log start of scan
+        error_log('Starting meta fields scan via AJAX');
+        
+        // Perform the scan
+        $meta_fields = openai_tag_suggester_get_meta_fields();
+        
+        // Restore original debug mode setting
+        update_option('openai_tag_suggester_meta_debug_mode', $original_debug_mode);
+        
+        // Get the debug log
+        $debug_log = get_option('openai_tag_suggester_meta_debug_log', array());
+        
+        // Log completion
+        error_log('Meta fields scan completed via AJAX, found ' . count($meta_fields) . ' fields');
+        
+        // Get any output that might have been generated
+        $unexpected_output = ob_get_clean();
+        
+        // Send success response
+        wp_send_json_success(array(
+            'message' => 'Meta fields scan completed successfully',
+            'count' => count($meta_fields),
+            'fields' => $meta_fields,
+            'debug_log' => $debug_log,
+            'unexpected_output' => $unexpected_output
+        ));
+    } catch (Exception $e) {
+        // Get any output that might have been generated
+        $unexpected_output = ob_get_clean();
+        
+        // Log the error
+        error_log('Error in meta fields scan: ' . $e->getMessage());
+        
+        // Send error response
+        wp_send_json_error(array(
+            'message' => 'Error scanning meta fields: ' . $e->getMessage(),
+            'unexpected_output' => $unexpected_output
+        ));
+    }
+}
+
+// Function to get faculty meta field value, handling underscore prefixes
+function openai_tag_suggester_get_faculty_meta($post_id, $meta_key) {
+    // Try without underscore first
+    $meta_value = get_post_meta($post_id, $meta_key, true);
+    
+    // If empty and this is likely a faculty meta field, try with underscore
+    if (empty($meta_value) && (strpos($meta_key, 'faculty_') === 0 || strpos($meta_key, 'search_') === 0)) {
+        $meta_value = get_post_meta($post_id, '_' . $meta_key, true);
+    }
+    
+    return $meta_value;
 }
 ?>
