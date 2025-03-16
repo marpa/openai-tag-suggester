@@ -77,6 +77,17 @@ function openai_tag_suggester_settings() {
         )
     );
 
+    // Content Sources setting
+    register_setting(
+        'openai_tag_suggester_options', 
+        'openai_tag_suggester_content_sources',
+        array(
+            'type' => 'array',
+            'default' => array('post_content'),
+            'sanitize_callback' => 'openai_tag_suggester_sanitize_content_sources'
+        )
+    );
+
     // Add settings sections
     add_settings_section(
         'openai_tag_suggester_main',
@@ -89,6 +100,14 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester_taxonomies',
         'Taxonomy Settings',
         'openai_tag_suggester_taxonomies_section_callback',
+        'openai_tag_suggester'
+    );
+
+    // Add Content Sources section
+    add_settings_section(
+        'openai_tag_suggester_content_sources',
+        'Tag Generation Sources',
+        'openai_tag_suggester_content_sources_section_callback',
         'openai_tag_suggester'
     );
 
@@ -132,6 +151,14 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester',
         'openai_tag_suggester_taxonomies'
     );
+    
+    add_settings_field(
+        'openai_tag_suggester_content_sources',
+        'Content Sources',
+        'openai_tag_suggester_content_sources_field',
+        'openai_tag_suggester',
+        'openai_tag_suggester_content_sources'
+    );
 }
 
 // Add section description callback
@@ -146,6 +173,118 @@ function openai_tag_suggester_taxonomies_section_callback() {
     echo '<li>Custom prompts can include specific instructions for each taxonomy (e.g., "Suggest 5 tags related to technology")</li>';
     echo '<li>Leave the custom prompt field empty to use the default prompt</li>';
     echo '</ul>';
+    echo '</div>';
+}
+
+// Add content sources section description callback
+function openai_tag_suggester_content_sources_section_callback() {
+    echo '<div class="content-sources-section-description">';
+    echo '<p>Select which content sources should be used for generating tag suggestions. The plugin will use the selected sources to create a combined content input for the AI.</p>';
+    echo '<p>You can select multiple sources to provide more context for tag generation. At least one source must be selected.</p>';
+    echo '<p><strong>Tips:</strong></p>';
+    echo '<ul style="list-style-type: disc; margin-left: 20px;">';
+    echo '<li>Post Content is the main content of your post and is selected by default</li>';
+    echo '<li>Meta fields can provide additional context for more accurate tag suggestions</li>';
+    echo '<li>Selecting multiple sources may result in more comprehensive tag suggestions</li>';
+    echo '<li>The plugin will automatically combine all selected sources before sending to the AI</li>';
+    echo '</ul>';
+    echo '</div>';
+}
+
+// Add content sources field renderer
+function openai_tag_suggester_content_sources_field() {
+    $content_sources = get_option('openai_tag_suggester_content_sources', array('post_content'));
+    
+    echo '<div class="content-sources-container">';
+    
+    // Post Content checkbox (always available)
+    echo '<div class="content-source-item">';
+    echo '<label>';
+    echo '<input type="checkbox" name="openai_tag_suggester_content_sources[]" value="post_content" ' . 
+         (in_array('post_content', $content_sources) ? 'checked' : '') . '>';
+    echo ' <strong>Post Content</strong> (main post content)';
+    echo '</label>';
+    echo '</div>';
+    
+    // Get all registered post types
+    $post_types = get_post_types(array('public' => true), 'objects');
+    
+    // Get all meta keys for all post types
+    $meta_keys = array();
+    foreach ($post_types as $post_type) {
+        $post_type_name = $post_type->name;
+        
+        // Get a sample post of this type
+        $posts = get_posts(array(
+            'post_type' => $post_type_name,
+            'posts_per_page' => 1,
+        ));
+        
+        if (!empty($posts)) {
+            $post_id = $posts[0]->ID;
+            $post_meta_keys = get_post_custom_keys($post_id);
+            
+            if ($post_meta_keys) {
+                foreach ($post_meta_keys as $meta_key) {
+                    // Skip internal meta keys
+                    if (substr($meta_key, 0, 1) === '_') {
+                        continue;
+                    }
+                    
+                    // Add to our list if not already there
+                    if (!in_array($meta_key, $meta_keys)) {
+                        $meta_keys[] = $meta_key;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Sort meta keys alphabetically
+    sort($meta_keys);
+    
+    if (!empty($meta_keys)) {
+        echo '<h4>Meta Fields</h4>';
+        echo '<div class="meta-fields-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-top: 10px;">';
+        
+        foreach ($meta_keys as $meta_key) {
+            $field_id = 'meta_' . sanitize_key($meta_key);
+            
+            echo '<div class="content-source-item">';
+            echo '<label>';
+            echo '<input type="checkbox" name="openai_tag_suggester_content_sources[]" value="' . esc_attr($meta_key) . '" ' . 
+                 (in_array($meta_key, $content_sources) ? 'checked' : '') . '>';
+            echo ' ' . esc_html($meta_key);
+            echo '</label>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
+        
+        // Add select all/none buttons for meta fields
+        echo '<div class="meta-field-controls" style="margin-top: 5px;">';
+        echo '<button type="button" class="button select-all-meta-fields">Select All Meta Fields</button> ';
+        echo '<button type="button" class="button select-none-meta-fields">Select None</button>';
+        echo '</div>';
+        
+        // Add JavaScript for select all/none functionality
+        echo '<script>
+            jQuery(document).ready(function($) {
+                $(".select-all-meta-fields").on("click", function(e) {
+                    e.preventDefault();
+                    $(".meta-fields-container input[type=checkbox]").prop("checked", true);
+                });
+                
+                $(".select-none-meta-fields").on("click", function(e) {
+                    e.preventDefault();
+                    $(".meta-fields-container input[type=checkbox]").prop("checked", false);
+                });
+            });
+        </script>';
+    } else {
+        echo '<p><em>No meta fields found. Add custom fields to your posts to see them here.</em></p>';
+    }
+    
     echo '</div>';
 }
 
@@ -345,20 +484,51 @@ function openai_tag_suggester_user_role_field() {
 // add_action('save_post', 'openai_tag_suggester_generate_tags', 10, 2);
 
 function openai_tag_suggester_generate_tags($post_id, $post) {
-    if ($post->post_type != 'post' || wp_is_post_revision($post_id)) {
-        error_log('Invalid post type or revision.');
-        return;
-    }
-
+    // Get API key
     $api_key = get_option('openai_tag_suggester_api_key');
     if (!$api_key) {
-        error_log('API key not set.');
         return;
     }
-
-    $post_content = $post->post_content;
-    $tags = openai_tag_suggester_get_tags($post_content, $api_key);
-
+    
+    // Get content sources from settings
+    $content_sources = get_option('openai_tag_suggester_content_sources', array('post_content'));
+    
+    // Initialize combined content
+    $combined_content = '';
+    
+    // Process each content source
+    foreach ($content_sources as $source) {
+        if ($source === 'post_content') {
+            // Get post content
+            $post_content = $post->post_content;
+            
+            // Add to combined content with a heading
+            $combined_content .= "POST CONTENT:\n" . $post_content . "\n\n";
+        } else {
+            // This is a meta field
+            $meta_value = get_post_meta($post_id, $source, true);
+            
+            if (!empty($meta_value)) {
+                // If it's an array or object, convert to string
+                if (is_array($meta_value) || is_object($meta_value)) {
+                    $meta_value = print_r($meta_value, true);
+                }
+                
+                // Add to combined content with a heading
+                $combined_content .= "META FIELD (" . $source . "):\n" . $meta_value . "\n\n";
+            }
+        }
+    }
+    
+    // If no content was found, return
+    if (empty($combined_content)) {
+        return;
+    }
+    
+    // Get tags from OpenAI
+    $tags = openai_tag_suggester_get_tags($combined_content, $api_key);
+    
+    // Process and save tags
     if ($tags) {
         wp_set_post_tags($post_id, $tags, true);
     } else {
@@ -1256,23 +1426,59 @@ function openai_tag_suggester_generate_tags_ajax() {
         return;
     }
 
-    // Get post content - either from the request or from the database
-    $post_content = '';
-    if (isset($_POST['content']) && !empty($_POST['content'])) {
-        // Use content sent from the client (useful for unsaved changes)
-        $post_content = wp_kses_post($_POST['content']);
-        error_log('Using content from request (' . strlen($post_content) . ' chars)');
-    } else {
-        // Fall back to getting content from the database
-        $post = get_post($post_id);
-        if (!$post) {
-            wp_send_json_error('Invalid post ID');
-            return;
-        }
-        $post_content = $post->post_content;
-        error_log('Using content from database (' . strlen($post_content) . ' chars)');
+    // Get content sources from settings
+    $content_sources = get_option('openai_tag_suggester_content_sources', array('post_content'));
+    error_log('Content sources: ' . print_r($content_sources, true));
+    
+    // Initialize combined content
+    $combined_content = '';
+    
+    // Get post object
+    $post = get_post($post_id);
+    if (!$post) {
+        wp_send_json_error('Invalid post ID');
+        return;
     }
-
+    
+    // Process each content source
+    foreach ($content_sources as $source) {
+        if ($source === 'post_content') {
+            // Get post content - either from the request or from the database
+            if (isset($_POST['content']) && !empty($_POST['content'])) {
+                // Use content sent from the client (useful for unsaved changes)
+                $post_content = wp_kses_post($_POST['content']);
+                error_log('Using content from request (' . strlen($post_content) . ' chars)');
+            } else {
+                // Fall back to getting content from the database
+                $post_content = $post->post_content;
+                error_log('Using content from database (' . strlen($post_content) . ' chars)');
+            }
+            
+            // Add to combined content with a heading
+            $combined_content .= "POST CONTENT:\n" . $post_content . "\n\n";
+        } else {
+            // This is a meta field
+            $meta_value = get_post_meta($post_id, $source, true);
+            
+            if (!empty($meta_value)) {
+                // If it's an array or object, convert to string
+                if (is_array($meta_value) || is_object($meta_value)) {
+                    $meta_value = print_r($meta_value, true);
+                }
+                
+                // Add to combined content with a heading
+                $combined_content .= "META FIELD (" . $source . "):\n" . $meta_value . "\n\n";
+                error_log('Added meta field ' . $source . ' (' . strlen($meta_value) . ' chars)');
+            }
+        }
+    }
+    
+    // If no content was found, return an error
+    if (empty($combined_content)) {
+        wp_send_json_error('No content found from selected sources');
+        return;
+    }
+    
     // Get API key
     $api_key = get_option('openai_tag_suggester_api_key');
     if (!$api_key) {
@@ -1291,24 +1497,21 @@ function openai_tag_suggester_generate_tags_ajax() {
             ob_end_clean();
         }
         
-        $tags = openai_tag_suggester_get_tags($post_content, $api_key, $taxonomy);
+        $tags = openai_tag_suggester_get_tags($combined_content, $api_key, $taxonomy);
         if ($tags) {
             wp_send_json_success(array(
                 'suggested' => $tags,
                 'existing' => wp_get_object_terms($post_id, $taxonomy, array('fields' => 'names')),
                 'using_custom_prompt' => $using_custom_prompt,
-                'taxonomy_label' => $taxonomy_label
+                'taxonomy_label' => $taxonomy_label,
+                'content_sources' => $content_sources
             ));
         } else {
-            wp_send_json_error('No tag suggestions available');
+            wp_send_json_error('Failed to generate tags');
         }
     } catch (Exception $e) {
-        error_log('Tag generation error: ' . $e->getMessage());
-        wp_send_json_error('Error generating tags: ' . $e->getMessage());
+        wp_send_json_error('Error: ' . $e->getMessage());
     }
-    
-    // Make sure we exit
-    wp_die();
 }
 
 // Add this with your other action hooks
@@ -1472,6 +1675,25 @@ function openai_tag_suggester_sanitize_taxonomy_prompts($prompts) {
     error_log('Sanitized taxonomy prompts: ' . print_r($sanitized_prompts, true));
     
     return $sanitized_prompts;
+}
+
+// Sanitize content sources
+function openai_tag_suggester_sanitize_content_sources($sources) {
+    if (!is_array($sources)) {
+        return array('post_content');
+    }
+    
+    $sanitized = array();
+    foreach ($sources as $source) {
+        $sanitized[] = sanitize_text_field($source);
+    }
+    
+    // Ensure at least post_content is selected
+    if (empty($sanitized)) {
+        $sanitized[] = 'post_content';
+    }
+    
+    return $sanitized;
 }
 
 // Ensure default Tags meta box is present

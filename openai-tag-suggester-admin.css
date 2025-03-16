@@ -564,3 +564,40 @@ body.block-editor-page .ai-tag-suggester .tag-controls,
     font-size: 11px !important;
     padding: 4px 6px !important;
 }
+
+/* Content Sources Styles */
+.content-sources-container {
+    margin-top: 10px;
+}
+
+.content-source-item {
+    margin-bottom: 5px;
+}
+
+.content-source-item label {
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+.meta-fields-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #f9f9f9;
+}
+
+.meta-field-controls {
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+.content-sources-section-description {
+    margin-bottom: 15px;
+}
+
+.content-sources-section-description ul {
+    list-style-type: disc;
+    margin-left: 20px;
+}

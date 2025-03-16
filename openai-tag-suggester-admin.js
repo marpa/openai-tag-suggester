@@ -156,13 +156,37 @@ jQuery(document).ready(function($) {
                     const existingTags = response.data.existing;
                     const usingCustomPrompt = response.data.using_custom_prompt;
                     const taxonomyLabel = response.data.taxonomy_label;
+                    const contentSources = response.data.content_sources || ['post_content'];
                     
                     let tagHtml = generateTagCheckboxes(suggestedTags, existingTags);
+                    
+                    // Add information about content sources
+                    let sourcesInfo = '<div class="notice notice-info sources-info">' +
+                                      '<p><strong>Content sources used:</strong> ';
+                    
+                    if (contentSources.includes('post_content')) {
+                        sourcesInfo += 'Post Content';
+                        
+                        // Count other sources
+                        const otherSources = contentSources.filter(source => source !== 'post_content');
+                        if (otherSources.length > 0) {
+                            sourcesInfo += ' and ' + otherSources.length + ' meta field' + 
+                                          (otherSources.length > 1 ? 's' : '');
+                        }
+                    } else {
+                        sourcesInfo += contentSources.length + ' meta field' + 
+                                      (contentSources.length > 1 ? 's' : '');
+                    }
+                    
+                    sourcesInfo += '</p></div>';
                     
                     // Add information about custom prompt if applicable
                     if (usingCustomPrompt) {
                         tagHtml = '<div class="notice notice-info custom-prompt-notice">' +
-                                  '<p>Using custom prompt for ' + taxonomyLabel + '</p></div>' + tagHtml;
+                                  '<p>Using custom prompt for ' + taxonomyLabel + '</p></div>' + 
+                                  sourcesInfo + tagHtml;
+                    } else {
+                        tagHtml = sourcesInfo + tagHtml;
                     }
                     
                     $results.html(tagHtml);
