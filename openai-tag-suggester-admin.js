@@ -1,8 +1,135 @@
 jQuery(document).ready(function($) {
+    console.log('OpenAI Tag Suggester: JavaScript loaded');
+    
+    // Initialize the tag suggester
+    function initTagSuggester() {
+        console.log('OpenAI Tag Suggester: Initializing');
+        
+        // Debug info
+        if (typeof openaiTagSuggester !== 'undefined') {
+            console.log('OpenAI Tag Suggester config:', openaiTagSuggester);
+        } else {
+            console.error('OpenAI Tag Suggester: Configuration object not found!');
+            return; // Exit if the config is missing
+        }
+        
+        // Check if the meta box exists
+        if ($('#openai_tag_suggester_meta_box').length === 0) {
+            console.log('OpenAI Tag Suggester: Meta box not found in initial check, waiting for dynamic creation');
+            
+            // Set an interval to check for the meta box being added dynamically
+            var checkInterval = setInterval(function() {
+                if ($('#openai_tag_suggester_meta_box').length > 0) {
+                    console.log('OpenAI Tag Suggester: Meta box found after dynamic creation');
+                    clearInterval(checkInterval);
+                    setupMetaBox();
+                }
+            }, 500);
+            
+            // Set a timeout to stop checking after 10 seconds
+            setTimeout(function() {
+                clearInterval(checkInterval);
+                console.error('OpenAI Tag Suggester: Timed out waiting for meta box');
+            }, 10000);
+        } else {
+            console.log('OpenAI Tag Suggester: Meta box found in initial check');
+            setupMetaBox();
+        }
+        
+        // Listen for custom events from the force visibility script
+        $(document).on('openai_tag_suggester_metabox_created', function() {
+            console.log('OpenAI Tag Suggester: Received metabox_created event');
+            setupMetaBox();
+        });
+        
+        $(document).on('openai_tag_suggester_content_created', function() {
+            console.log('OpenAI Tag Suggester: Received content_created event');
+            setupMetaBox();
+        });
+    }
+    
+    // Setup the meta box once it's available
+    function setupMetaBox() {
+        // Make sure our meta box is visible
+        $('#openai_tag_suggester_meta_box').show();
+        
+        // Check if the button exists inside the meta box
+        if ($('#openai_tag_suggester_button').length === 0) {
+            console.log('OpenAI Tag Suggester: Button not found, recreating meta box content');
+            
+            // Get the inside div of the meta box
+            var $inside = $('#openai_tag_suggester_meta_box .inside');
+            if ($inside.length > 0) {
+                // Create the content for the meta box
+                var content = '<div id="openai_tag_suggester_container" class="ai-tag-suggester">';
+                content += '<p class="howto">Generate AI-powered tag suggestions based on your content.</p>';
+                
+                // Taxonomy selector
+                content += '<div class="taxonomy-selector" style="margin-bottom: 10px;">';
+                content += '<label for="openai_tag_suggester_taxonomy" class="howto">Select taxonomy:</label>';
+                content += '<select id="openai_tag_suggester_taxonomy" name="openai_tag_suggester_taxonomy" class="widefat">';
+                content += '<option value="post_tag" selected>Tags</option>';
+                content += '<option value="hashtag">Hashtags</option>';
+                content += '</select>';
+                content += '</div>';
+                
+                // Generate button
+                content += '<button type="button" id="openai_tag_suggester_button" name="openai_tag_suggester_button" ';
+                content += 'class="button button-primary" style="width: 100%; margin-bottom: 10px;">';
+                content += 'Generate Tag Suggestions</button>';
+                
+                // Results area
+                content += '<div id="openai_tag_suggester_results" class="tag-results-container"></div>';
+                
+                content += '</div>';
+                
+                // Add the content to the meta box
+                $inside.html(content);
+                
+                // Bind click event for generating tags
+                $('#openai_tag_suggester_button').on('click', generateTags);
+            } else {
+                console.error('OpenAI Tag Suggester: Meta box inside div not found');
+            }
+        } else {
+            console.log('OpenAI Tag Suggester: Button found, binding click event');
+            // Bind click event for generating tags
+            $('#openai_tag_suggester_button').on('click', generateTags);
+        }
+        
+        // Add Select All/None functionality
+        $(document).on('click', '.select-all-tags', function() {
+            $('.tag-checkbox:not(:disabled)').prop('checked', true);
+        });
+        
+        $(document).on('click', '.select-none-tags', function() {
+            $('.tag-checkbox:not(:disabled)').prop('checked', false);
+        });
+    }
+    
     function generateTags() {
         const $button = $('#openai_tag_suggester_button');
         const $results = $('#openai_tag_suggester_results');
         const selectedTaxonomy = $('#openai_tag_suggester_taxonomy').val();
+        
+        // Get post content based on editor type
+        let postContent = '';
+        
+        if (openaiTagSuggester.is_classic_editor) {
+            // For Classic Editor, get content from the textarea
+            if (typeof tinyMCE !== 'undefined' && tinyMCE.get('content')) {
+                // Visual tab is active
+                postContent = tinyMCE.get('content').getContent();
+            } else {
+                // Text tab is active
+                postContent = $('#content').val();
+            }
+        } else {
+            // For Block Editor (Gutenberg), get content from the store
+            if (typeof wp !== 'undefined' && wp.data && wp.data.select('core/editor')) {
+                postContent = wp.data.select('core/editor').getEditedPostContent();
+            }
+        }
         
         // Show loading state
         $button.prop('disabled', true).text('Generating...');
@@ -15,6 +142,7 @@ jQuery(document).ready(function($) {
                 action: 'openai_tag_suggester_generate_tags',
                 post_id: openaiTagSuggester.post_id,
                 taxonomy: selectedTaxonomy,
+                content: postContent, // Send the content directly
                 nonce: openaiTagSuggester.nonce
             },
             success: function(response) {
@@ -89,9 +217,6 @@ jQuery(document).ready(function($) {
         return tagHtml;
     }
 
-    // Bind click event
-    $(document).on('click', '#openai_tag_suggester_button', generateTags);
-
     // Add Selected Tags handler
     $(document).on('click', '.add-selected-tags', function() {
         const $button = $(this);
@@ -135,13 +260,14 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     // Show success message
                     $results.prepend(
-                        '<div class="notice notice-success"><p>Tags added successfully! Refreshing page...</p></div>'
+                        '<div class="notice notice-success"><p>Tags added successfully!</p></div>'
                     );
                     
-                    // Refresh the page after a short delay
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1500);
+                    // Update the tags in the UI based on editor type
+                    updateTagsInEditor(selectedTaxonomy, selectedTags);
+                    
+                    // Reset button
+                    $button.prop('disabled', false).text('Add Selected Tags');
                 } else {
                     $button.prop('disabled', false).text('Add Selected Tags');
                     $results.prepend(
@@ -164,7 +290,55 @@ jQuery(document).ready(function($) {
             }
         });
     });
-
-    // Bind click event
-    $(document).on('click', '#openai_tag_suggester_button', generateTags);
+    
+    // Update tags in the editor UI without page refresh
+    function updateTagsInEditor(taxonomy, newTags) {
+        if (taxonomy === 'post_tag') {
+            if (openaiTagSuggester.is_classic_editor) {
+                // For Classic Editor
+                const $tagInput = $('#new-tag-post_tag');
+                if ($tagInput.length) {
+                    // Add tags to the input
+                    let currentTags = $tagInput.val();
+                    let tagsToAdd = newTags.join(', ');
+                    
+                    if (currentTags) {
+                        $tagInput.val(currentTags + ', ' + tagsToAdd);
+                    } else {
+                        $tagInput.val(tagsToAdd);
+                    }
+                    
+                    // Trigger the Add button
+                    $('.tagadd').click();
+                }
+            } else {
+                // For Block Editor (Gutenberg)
+                if (typeof wp !== 'undefined' && wp.data && wp.data.select('core/editor')) {
+                    // Get current tags
+                    const currentTags = wp.data.select('core/editor').getEditedPostAttribute('tags') || [];
+                    
+                    // Create a set of new tag IDs to add
+                    // This is more complex as we need to create terms if they don't exist
+                    // For simplicity, we'll just refresh the page
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                }
+            }
+        } else {
+            // For custom taxonomies, just refresh the page
+            setTimeout(function() {
+                window.location.reload();
+            }, 1500);
+        }
+    }
+    
+    // Initialize
+    initTagSuggester();
+    
+    // Listen for the custom initialization event
+    $(document).on('openai_tag_suggester_init', function() {
+        console.log('OpenAI Tag Suggester: Received init event');
+        initTagSuggester();
+    });
 });

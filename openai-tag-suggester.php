@@ -575,33 +575,55 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
 }
 
 // Add meta box to post editor screen
-add_action('add_meta_boxes', 'openai_tag_suggester_add_meta_box');
+add_action('add_meta_boxes', 'openai_tag_suggester_add_meta_box', 1);
 function openai_tag_suggester_add_meta_box() {
-    // Add our meta box AFTER the default tags box
+    // Add our meta box to posts
     add_meta_box(
         'openai_tag_suggester_meta_box',
         'AI Tag Suggestions',
         'openai_tag_suggester_meta_box_callback',
         'post',
-        'side',
-        'low'  // Ensures it appears below the default tags box
+        'normal',  // Changed from 'side' to 'normal' for better visibility
+        'high'     // High priority to ensure it's at the top
     );
+    
+    // For Classic Editor, we need to ensure the meta box is visible
+    if (openai_tag_suggester_is_classic_editor()) {
+        // Add a script to ensure the meta box is visible in Classic Editor
+        add_action('admin_footer', 'openai_tag_suggester_ensure_metabox_visible');
+    }
+    
+    // Debug log
+    error_log('OpenAI Tag Suggester: Meta box added with high priority');
 }
 
 function openai_tag_suggester_meta_box_callback($post) {
     wp_nonce_field('openai_tag_suggester_nonce', 'openai_tag_suggester_nonce');
     
-    echo '<div id="openai_tag_suggester_container" class="ai-tag-suggester">';
+    // Add debug information
+    error_log('OpenAI Tag Suggester: Meta box callback called for post ID ' . $post->ID);
+    
+    // Add a class to identify if we're in Classic Editor
+    $editor_class = openai_tag_suggester_is_classic_editor() ? 'classic-editor-mode' : 'block-editor-mode';
+    error_log('OpenAI Tag Suggester: Editor class: ' . $editor_class);
+    
+    echo '<div id="openai_tag_suggester_container" class="ai-tag-suggester ' . $editor_class . '">';
     
     // Instructions for users
     echo '<p class="howto">Generate AI-powered tag suggestions based on your content.</p>';
     
     // Taxonomy selector
     $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
+    error_log('OpenAI Tag Suggester: Enabled taxonomies: ' . print_r($enabled_taxonomies, true));
+    
     echo '<div class="taxonomy-selector" style="margin-bottom: 10px;">';
     echo '<label for="openai_tag_suggester_taxonomy" class="howto">Select taxonomy:</label>';
     echo '<select id="openai_tag_suggester_taxonomy" name="openai_tag_suggester_taxonomy" class="widefat">';
-    foreach (openai_tag_suggester_get_available_taxonomies() as $tax_name => $tax_label) {
+    
+    $available_taxonomies = openai_tag_suggester_get_available_taxonomies();
+    error_log('OpenAI Tag Suggester: Available taxonomies: ' . print_r($available_taxonomies, true));
+    
+    foreach ($available_taxonomies as $tax_name => $tax_label) {
         if (in_array($tax_name, $enabled_taxonomies)) {
             $selected = ($tax_name === 'post_tag') ? 'selected' : '';
             echo '<option value="' . esc_attr($tax_name) . '" ' . $selected . '>' . 
@@ -617,9 +639,69 @@ function openai_tag_suggester_meta_box_callback($post) {
     echo 'Generate Tag Suggestions</button>';
     
     // Results area
-    echo '<div id="openai_tag_suggester_results"></div>';
+    echo '<div id="openai_tag_suggester_results" class="tag-results-container"></div>';
+    
+    // Add debug info for Classic Editor
+    if (openai_tag_suggester_is_classic_editor()) {
+        echo '<div class="classic-editor-info" style="margin-top: 10px; font-size: 11px; color: #666;">';
+        echo 'Classic Editor detected. Tags will be added to the Tags meta box.';
+        echo '</div>';
+    }
     
     echo '</div>';
+    
+    // Add visible debug info
+    echo '<div class="debug-info" style="margin-top: 15px; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; font-size: 11px;">';
+    echo '<p><strong>Debug Info:</strong></p>';
+    echo '<p>Editor Type: ' . ($editor_class == 'classic-editor-mode' ? 'Classic Editor' : 'Block Editor') . '</p>';
+    echo '<p>Meta Box ID: openai_tag_suggester_meta_box</p>';
+    echo '<p>Enabled Taxonomies: ' . implode(', ', $enabled_taxonomies) . '</p>';
+    echo '</div>';
+}
+
+// Function to ensure the meta box is visible in Classic Editor
+function openai_tag_suggester_ensure_metabox_visible() {
+    ?>
+    <script type="text/javascript">
+    jQuery(document).ready(function($) {
+        console.log('OpenAI Tag Suggester: Ensuring meta box visibility in Classic Editor');
+        
+        // Force show our meta box
+        $('#openai_tag_suggester_meta_box').show();
+        $('#openai_tag_suggester_meta_box-hide').prop('checked', false);
+        
+        // If the meta box is hidden by screen options, unhide it
+        if ($('#openai_tag_suggester_meta_box').css('display') === 'none') {
+            $('#openai_tag_suggester_meta_box').show();
+        }
+        
+        // Add a more aggressive approach to ensure visibility
+        setTimeout(function() {
+            console.log('OpenAI Tag Suggester: Delayed visibility check');
+            $('#openai_tag_suggester_meta_box').css({
+                'display': 'block !important',
+                'visibility': 'visible !important',
+                'opacity': '1 !important'
+            });
+            
+            // Also try to add it to the page if it's missing
+            if ($('#openai_tag_suggester_meta_box').length === 0) {
+                console.log('OpenAI Tag Suggester: Meta box not found, attempting to add it');
+                
+                // Create a basic version of the meta box
+                var metaBox = $('<div id="openai_tag_suggester_meta_box" class="postbox">' +
+                    '<h2 class="hndle ui-sortable-handle"><span>AI Tag Suggestions</span></h2>' +
+                    '<div class="inside">' +
+                    '<p>Please refresh the page to use the AI Tag Suggester.</p>' +
+                    '</div></div>');
+                
+                // Add it to the side meta box container
+                $('#side-sortables').append(metaBox);
+            }
+        }, 1000);
+    });
+    </script>
+    <?php
 }
 
 // Add custom styling to separate the UIs
@@ -707,40 +789,6 @@ add_action('admin_head', function() {
     <?php
 });
 
-// Remove any old hooks
-remove_action('post_tag_add_form_fields', 'openai_tag_suggester_inject_ui', 1);
-remove_action('hashtag_add_form_fields', 'openai_tag_suggester_inject_ui', 1);
-
-/**
- * Register the UI injection for each enabled taxonomy
- */
-function openai_tag_suggester_register_taxonomy_hooks() {
-    $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
-    
-    error_log('=== Tag Suggester Hook Registration ===');
-    error_log('Registering hooks for taxonomies: ' . print_r($enabled_taxonomies, true));
-    
-    foreach ($enabled_taxonomies as $taxonomy) {
-        error_log('Adding hooks for taxonomy: ' . $taxonomy);
-        
-        // Add to the taxonomy meta box in post editor
-        add_action('add_meta_boxes', function() use ($taxonomy) {
-            add_meta_box(
-                'openai_tag_suggester_' . $taxonomy,
-                'Tag Suggestions for ' . ucfirst($taxonomy),
-                'openai_tag_suggester_inject_ui',
-                'post',
-                'side',
-                'high'
-            );
-        });
-        
-        // Add to the taxonomy page
-        add_action($taxonomy . '_add_form_fields', 'openai_tag_suggester_inject_ui', 1);
-        add_action($taxonomy . '_edit_form_fields', 'openai_tag_suggester_inject_ui', 1);
-    }
-}
-
 /**
  * Enqueue necessary CSS and JavaScript files for the admin interface
  */
@@ -754,7 +802,9 @@ function openai_tag_suggester_enqueue_admin_scripts($hook) {
     // Enqueue our custom CSS file
     wp_enqueue_style(
         'openai-tag-suggester-admin', 
-        plugin_dir_url(__FILE__) . 'openai-tag-suggester-admin.css'
+        plugin_dir_url(__FILE__) . 'openai-tag-suggester-admin.css',
+        array(),
+        '1.0.1'  // Increment version to bust cache
     );
     
     // Enqueue our custom JavaScript file
@@ -762,7 +812,7 @@ function openai_tag_suggester_enqueue_admin_scripts($hook) {
         'openai-tag-suggester-admin', 
         plugin_dir_url(__FILE__) . 'openai-tag-suggester-admin.js', 
         array('jquery'), 
-        null, 
+        '1.0.1',  // Increment version to bust cache
         true  // Load in footer
     );
     
@@ -774,9 +824,52 @@ function openai_tag_suggester_enqueue_admin_scripts($hook) {
             'ajax_url' => admin_url('admin-ajax.php'),
             'post_id' => get_the_ID(),
             'nonce' => wp_create_nonce('openai_tag_suggester_nonce'),
-            'autoload' => true  // New flag to indicate we want automatic loading
+            'is_classic_editor' => openai_tag_suggester_is_classic_editor(),
+            'autoload' => true,  // Auto-initialize on page load
+            'debug' => true      // Enable debug logging
         )
     );
+    
+    // Add inline script to ensure initialization
+    wp_add_inline_script('openai-tag-suggester-admin', '
+        jQuery(document).ready(function($) {
+            console.log("OpenAI Tag Suggester: Inline script running");
+            
+            // Force initialization after a short delay
+            setTimeout(function() {
+                if (typeof openaiTagSuggester !== "undefined") {
+                    console.log("OpenAI Tag Suggester: Triggering initialization from inline script");
+                    $(document).trigger("openai_tag_suggester_init");
+                }
+            }, 1000);
+        });
+    ');
+}
+
+/**
+ * Check if the current editor is the Classic Editor
+ */
+function openai_tag_suggester_is_classic_editor() {
+    // Check if the Classic Editor plugin is active
+    if (function_exists('classic_editor_init')) {
+        // Check if the user has selected to use the Classic Editor
+        $editor_option = get_option('classic-editor-replace');
+        if ($editor_option === 'classic' || $editor_option === 'replace') {
+            return true;
+        }
+        
+        // Check if the current post is being edited with Classic Editor
+        if (isset($_GET['classic-editor'])) {
+            return true;
+        }
+    }
+    
+    // Check if the Gutenberg plugin is NOT active and WordPress version is < 5.0
+    if (!function_exists('gutenberg_init') && version_compare($GLOBALS['wp_version'], '5.0', '<')) {
+        return true;
+    }
+    
+    return false;
 }
 
 // Handle AJAX request to generate tag suggestions
@@ -810,11 +903,21 @@ function openai_tag_suggester_generate_tags_ajax() {
         return;
     }
 
-    // Get post content
-    $post = get_post($post_id);
-    if (!$post) {
-        wp_send_json_error('Invalid post ID');
-        return;
+    // Get post content - either from the request or from the database
+    $post_content = '';
+    if (isset($_POST['content']) && !empty($_POST['content'])) {
+        // Use content sent from the client (useful for unsaved changes)
+        $post_content = wp_kses_post($_POST['content']);
+        error_log('Using content from request (' . strlen($post_content) . ' chars)');
+    } else {
+        // Fall back to getting content from the database
+        $post = get_post($post_id);
+        if (!$post) {
+            wp_send_json_error('Invalid post ID');
+            return;
+        }
+        $post_content = $post->post_content;
+        error_log('Using content from database (' . strlen($post_content) . ' chars)');
     }
 
     // Get API key
@@ -830,7 +933,7 @@ function openai_tag_suggester_generate_tags_ajax() {
             ob_end_clean();
         }
         
-        $tags = openai_tag_suggester_get_tags($post->post_content, $api_key, $taxonomy);
+        $tags = openai_tag_suggester_get_tags($post_content, $api_key, $taxonomy);
         if ($tags) {
             wp_send_json_success(array(
                 'suggested' => $tags,
@@ -1004,16 +1107,165 @@ add_action('init', function() {
 });
 
 // Add meta boxes for both taxonomies
-add_action('add_meta_boxes', 'openai_tag_suggester_add_meta_boxes');
-function openai_tag_suggester_add_meta_boxes() {
-    // Add AI Tag Suggestions box
-    add_meta_box(
-        'openai_tag_suggester_meta_box',
-        'AI Tag Suggestions',
-        'openai_tag_suggester_meta_box_callback',
-        'post',
-        'side',
-        'low'
-    );
+// Add a body class for Classic Editor
+add_filter('admin_body_class', 'openai_tag_suggester_add_admin_body_class');
+function openai_tag_suggester_add_admin_body_class($classes) {
+    // Check if we're on the post edit screen
+    $screen = get_current_screen();
+    if ($screen && $screen->base === 'post' && openai_tag_suggester_is_classic_editor()) {
+        $classes .= ' using-classic-editor';
+    }
+    return $classes;
+}
+
+// Add an admin notice to help debug
+add_action('admin_notices', 'openai_tag_suggester_admin_notice');
+function openai_tag_suggester_admin_notice() {
+    $screen = get_current_screen();
+    
+    // Only show on post edit screen
+    if (!$screen || $screen->base !== 'post') {
+        return;
+    }
+    
+    $is_classic = openai_tag_suggester_is_classic_editor() ? 'Yes' : 'No';
+    
+    echo '<div class="notice notice-info is-dismissible">';
+    echo '<p><strong>OpenAI Tag Suggester Debug:</strong></p>';
+    echo '<p>Current Screen: ' . $screen->base . '</p>';
+    echo '<p>Post Type: ' . $screen->post_type . '</p>';
+    echo '<p>Using Classic Editor: ' . $is_classic . '</p>';
+    echo '<p>If you don\'t see the AI Tag Suggestions meta box, please check the Screen Options at the top of the page.</p>';
+    echo '</div>';
+}
+
+// Ensure our meta box is not hidden by default in Classic Editor
+add_filter('default_hidden_meta_boxes', 'openai_tag_suggester_show_meta_box', 10, 2);
+function openai_tag_suggester_show_meta_box($hidden, $screen) {
+    // Only modify for post edit screen
+    if ($screen->base === 'post' && openai_tag_suggester_is_classic_editor()) {
+        // Remove our meta box from the hidden list if it's there
+        $hidden = array_diff($hidden, array('openai_tag_suggester_meta_box'));
+    }
+    return $hidden;
+}
+
+// Add direct JavaScript injection to force meta box visibility
+add_action('admin_footer', 'openai_tag_suggester_force_metabox_visibility');
+function openai_tag_suggester_force_metabox_visibility() {
+    $screen = get_current_screen();
+    
+    // Only run on post edit screen
+    if (!$screen || $screen->base !== 'post') {
+        return;
+    }
+    
+    // Get the enabled taxonomies
+    $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
+    $taxonomy_options = '';
+    
+    foreach (openai_tag_suggester_get_available_taxonomies() as $tax_name => $tax_label) {
+        if (in_array($tax_name, $enabled_taxonomies)) {
+            $selected = ($tax_name === 'post_tag') ? 'selected' : '';
+            $taxonomy_options .= '<option value="' . esc_attr($tax_name) . '" ' . $selected . '>' . 
+                 esc_html($tax_label) . '</option>';
+        }
+    }
+    
+    ?>
+    <script type="text/javascript">
+    jQuery(document).ready(function($) {
+        console.log('OpenAI Tag Suggester: Force visibility script running');
+        
+        // Force the meta box to be visible with !important styles
+        var css = `
+            #openai_tag_suggester_meta_box {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                background-color: #f8f8f8 !important;
+                border: 2px solid #007cba !important;
+                margin-top: 20px !important;
+            }
+            #openai_tag_suggester_meta_box h2 {
+                background-color: #e0f0ff !important;
+                color: #000 !important;
+                font-weight: bold !important;
+            }
+            #openai_tag_suggester_meta_box .inside {
+                padding: 10px !important;
+            }
+        `;
+        
+        // Add the CSS to the page
+        $('<style>').text(css).appendTo('head');
+        
+        // Check if the meta box exists
+        if ($('#openai_tag_suggester_meta_box').length === 0) {
+            console.log('OpenAI Tag Suggester: Meta box not found, creating it');
+            
+            // Create a complete version of the meta box with all necessary content
+            var metaBox = $('<div id="openai_tag_suggester_meta_box" class="postbox">' +
+                '<h2 class="hndle ui-sortable-handle"><span>AI Tag Suggestions</span></h2>' +
+                '<div class="inside">' +
+                '<div id="openai_tag_suggester_container" class="ai-tag-suggester">' +
+                '<p class="howto">Generate AI-powered tag suggestions based on your content.</p>' +
+                '<div class="taxonomy-selector" style="margin-bottom: 10px;">' +
+                '<label for="openai_tag_suggester_taxonomy" class="howto">Select taxonomy:</label>' +
+                '<select id="openai_tag_suggester_taxonomy" name="openai_tag_suggester_taxonomy" class="widefat">' +
+                '<?php echo $taxonomy_options; ?>' +
+                '</select>' +
+                '</div>' +
+                '<button type="button" id="openai_tag_suggester_button" name="openai_tag_suggester_button" ' +
+                'class="button button-primary" style="width: 100%; margin-bottom: 10px;">' +
+                'Generate Tag Suggestions</button>' +
+                '<div id="openai_tag_suggester_results" class="tag-results-container"></div>' +
+                '</div>' +
+                '</div></div>');
+            
+            // Add it to the normal meta box container
+            $('#normal-sortables').prepend(metaBox);
+            
+            // Make sure it's visible
+            $('#openai_tag_suggester_meta_box').show();
+            
+            // Trigger a custom event to notify our script that the meta box has been created
+            $(document).trigger('openai_tag_suggester_metabox_created');
+        } else {
+            console.log('OpenAI Tag Suggester: Meta box found, ensuring visibility');
+            $('#openai_tag_suggester_meta_box').show();
+            
+            // Check if the inside content exists
+            if ($('#openai_tag_suggester_container').length === 0) {
+                console.log('OpenAI Tag Suggester: Container not found, creating content');
+                
+                // Create the content
+                var content = '<div id="openai_tag_suggester_container" class="ai-tag-suggester">' +
+                    '<p class="howto">Generate AI-powered tag suggestions based on your content.</p>' +
+                    '<div class="taxonomy-selector" style="margin-bottom: 10px;">' +
+                    '<label for="openai_tag_suggester_taxonomy" class="howto">Select taxonomy:</label>' +
+                    '<select id="openai_tag_suggester_taxonomy" name="openai_tag_suggester_taxonomy" class="widefat">' +
+                    '<?php echo $taxonomy_options; ?>' +
+                    '</select>' +
+                    '</div>' +
+                    '<button type="button" id="openai_tag_suggester_button" name="openai_tag_suggester_button" ' +
+                    'class="button button-primary" style="width: 100%; margin-bottom: 10px;">' +
+                    'Generate Tag Suggestions</button>' +
+                    '<div id="openai_tag_suggester_results" class="tag-results-container"></div>' +
+                    '</div>';
+                
+                // Add the content to the meta box
+                $('#openai_tag_suggester_meta_box .inside').html(content);
+                
+                // Trigger a custom event to notify our script that the content has been created
+                $(document).trigger('openai_tag_suggester_content_created');
+            }
+        }
+        
+        // Also ensure it's not hidden by screen options
+        $('#openai_tag_suggester_meta_box-hide').prop('checked', false);
+    });
+    </script>
+    <?php
 }
 ?>
