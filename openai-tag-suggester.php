@@ -2,7 +2,7 @@
 /*
 Plugin Name: OpenAI Tag Suggester
 Description: Suggests tags for posts using the OpenAI API.
-Version: 1.1.0
+Version: 1.2.0
 Author: Alex Chapin
 */
 
@@ -136,7 +136,17 @@ function openai_tag_suggester_settings() {
 
 // Add section description callback
 function openai_tag_suggester_taxonomies_section_callback() {
-    echo '<p>Select which taxonomies should be available for tag suggestions.</p>';
+    echo '<div class="taxonomy-section-description">';
+    echo '<p>Select which taxonomies should be available for tag suggestions. The plugin will detect all taxonomies registered on your site.</p>';
+    echo '<p>For each enabled taxonomy, you can optionally create a custom prompt that will be used specifically when generating suggestions for that taxonomy.</p>';
+    echo '<p><strong>Tips:</strong></p>';
+    echo '<ul style="list-style-type: disc; margin-left: 20px;">';
+    echo '<li>Use the search box to quickly find specific taxonomies</li>';
+    echo '<li>Taxonomies are grouped by post type for easier navigation</li>';
+    echo '<li>Custom prompts can include specific instructions for each taxonomy (e.g., "Suggest 5 tags related to technology")</li>';
+    echo '<li>Leave the custom prompt field empty to use the default prompt</li>';
+    echo '</ul>';
+    echo '</div>';
 }
 
 // Add taxonomy field renderer
@@ -145,36 +155,85 @@ function openai_tag_suggester_enabled_taxonomies_field() {
     $available_taxonomies = openai_tag_suggester_get_available_taxonomies();
     $taxonomy_prompts = get_option('openai_tag_suggester_taxonomy_prompts', array());
     
-    echo '<div class="taxonomy-checkboxes">';
-    foreach ($available_taxonomies as $tax_name => $tax_label) {
-        $checked = in_array($tax_name, $enabled_taxonomies) ? 'checked' : '';
-        $display_style = in_array($tax_name, $enabled_taxonomies) ? 'block' : 'none';
-        $prompt = isset($taxonomy_prompts[$tax_name]) ? $taxonomy_prompts[$tax_name] : '';
+    // Get taxonomy objects to access more information
+    $taxonomy_objects = get_taxonomies(array('show_ui' => true), 'objects');
+    
+    // Group taxonomies by object type (post types they're associated with)
+    $grouped_taxonomies = array();
+    $core_taxonomies = array();
+    
+    foreach ($taxonomy_objects as $tax) {
+        if (in_array($tax->name, array('link_category'))) {
+            continue; // Skip internal taxonomies
+        }
         
-        echo '<div class="taxonomy-item">';
-        echo '<label class="taxonomy-checkbox-label">';
-        echo '<input type="checkbox" name="openai_tag_suggester_enabled_taxonomies[]" ';
-        echo 'class="taxonomy-checkbox" data-taxonomy="' . esc_attr($tax_name) . '" ';
-        echo 'value="' . esc_attr($tax_name) . '" ' . $checked . '> ';
-        echo esc_html($tax_label) . ' (' . esc_html($tax_name) . ')';
-        echo '</label>';
+        // Check if it's a core taxonomy
+        if (in_array($tax->name, array('category', 'post_tag', 'post_format'))) {
+            $core_taxonomies[$tax->name] = $tax;
+            continue;
+        }
         
-        echo '<div class="taxonomy-prompt-container" id="prompt-' . esc_attr($tax_name) . '" style="display: ' . $display_style . ';">';
-        echo '<p><label for="taxonomy-prompt-' . esc_attr($tax_name) . '">Custom prompt for ' . esc_html($tax_label) . ':</label></p>';
-        echo '<textarea name="openai_tag_suggester_taxonomy_prompts[' . esc_attr($tax_name) . ']" ';
-        echo 'id="taxonomy-prompt-' . esc_attr($tax_name) . '" rows="4" cols="50" class="widefat">';
-        echo esc_textarea($prompt);
-        echo '</textarea>';
-        echo '<p class="description">Leave blank to use the default prompt. This prompt will be used specifically for ' . esc_html($tax_label) . '.</p>';
-        echo '</div>';
-        echo '</div>';
+        // Group by object type
+        if (!empty($tax->object_type)) {
+            foreach ($tax->object_type as $object_type) {
+                if (!isset($grouped_taxonomies[$object_type])) {
+                    $grouped_taxonomies[$object_type] = array();
+                }
+                $grouped_taxonomies[$object_type][$tax->name] = $tax;
+            }
+        } else {
+            // Fallback for taxonomies without object types
+            if (!isset($grouped_taxonomies['other'])) {
+                $grouped_taxonomies['other'] = array();
+            }
+            $grouped_taxonomies['other'][$tax->name] = $tax;
+        }
     }
+    
+    // Add search filter
+    echo '<div class="taxonomy-filter">';
+    echo '<input type="text" id="taxonomy-search" class="widefat" placeholder="Search taxonomies..." style="margin-bottom: 15px;">';
     echo '</div>';
     
-    // Add JavaScript to show/hide prompt fields based on checkbox state
+    echo '<div class="taxonomy-checkboxes">';
+    
+    // First show core WordPress taxonomies
+    if (!empty($core_taxonomies)) {
+        echo '<div class="taxonomy-group">';
+        echo '<h3>WordPress Core Taxonomies</h3>';
+        
+        foreach ($core_taxonomies as $tax) {
+            output_taxonomy_item($tax, $enabled_taxonomies, $taxonomy_prompts);
+        }
+        
+        echo '</div>';
+    }
+    
+    // Then show other taxonomies grouped by post type
+    foreach ($grouped_taxonomies as $object_type => $taxonomies) {
+        if (empty($taxonomies)) continue;
+        
+        // Get post type label if available
+        $post_type_obj = get_post_type_object($object_type);
+        $group_label = $post_type_obj ? $post_type_obj->labels->name : ucfirst($object_type);
+        
+        echo '<div class="taxonomy-group">';
+        echo '<h3>' . esc_html($group_label) . ' Taxonomies</h3>';
+        
+        foreach ($taxonomies as $tax) {
+            output_taxonomy_item($tax, $enabled_taxonomies, $taxonomy_prompts);
+        }
+        
+        echo '</div>';
+    }
+    
+    echo '</div>';
+    
+    // Add JavaScript to show/hide prompt fields based on checkbox state and filter taxonomies
     ?>
     <script type="text/javascript">
     jQuery(document).ready(function($) {
+        // Show/hide prompt fields
         $('.taxonomy-checkbox').on('change', function() {
             var taxonomy = $(this).data('taxonomy');
             if ($(this).is(':checked')) {
@@ -182,6 +241,31 @@ function openai_tag_suggester_enabled_taxonomies_field() {
             } else {
                 $('#prompt-' + taxonomy).slideUp();
             }
+        });
+        
+        // Filter taxonomies
+        $('#taxonomy-search').on('keyup', function() {
+            var searchText = $(this).val().toLowerCase();
+            
+            $('.taxonomy-item').each(function() {
+                var taxonomyName = $(this).find('.taxonomy-checkbox-label').text().toLowerCase();
+                if (taxonomyName.indexOf(searchText) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+            
+            // Show/hide group headers based on visible items
+            $('.taxonomy-group').each(function() {
+                var visibleItems = $(this).find('.taxonomy-item:visible').length;
+                if (visibleItems > 0) {
+                    $(this).show();
+                    $(this).find('h3').show();
+                } else {
+                    $(this).hide();
+                }
+            });
         });
     });
     </script>
@@ -194,6 +278,34 @@ function openai_tag_suggester_enabled_taxonomies_field() {
     echo 'Available taxonomies: ' . print_r($available_taxonomies, true) . "\n";
     echo 'Taxonomy prompts: ' . print_r($taxonomy_prompts, true);
     echo '</pre>';
+    echo '</div>';
+}
+
+// Helper function to output a taxonomy item
+function output_taxonomy_item($tax, $enabled_taxonomies, $taxonomy_prompts) {
+    $tax_name = $tax->name;
+    $tax_label = $tax->label;
+    
+    $checked = in_array($tax_name, $enabled_taxonomies) ? 'checked' : '';
+    $display_style = in_array($tax_name, $enabled_taxonomies) ? 'block' : 'none';
+    $prompt = isset($taxonomy_prompts[$tax_name]) ? $taxonomy_prompts[$tax_name] : '';
+    
+    echo '<div class="taxonomy-item">';
+    echo '<label class="taxonomy-checkbox-label">';
+    echo '<input type="checkbox" name="openai_tag_suggester_enabled_taxonomies[]" ';
+    echo 'class="taxonomy-checkbox" data-taxonomy="' . esc_attr($tax_name) . '" ';
+    echo 'value="' . esc_attr($tax_name) . '" ' . $checked . '> ';
+    echo esc_html($tax_label) . ' <span class="taxonomy-name">(' . esc_html($tax_name) . ')</span>';
+    echo '</label>';
+    
+    echo '<div class="taxonomy-prompt-container" id="prompt-' . esc_attr($tax_name) . '" style="display: ' . $display_style . ';">';
+    echo '<p><label for="taxonomy-prompt-' . esc_attr($tax_name) . '">Custom prompt for ' . esc_html($tax_label) . ':</label></p>';
+    echo '<textarea name="openai_tag_suggester_taxonomy_prompts[' . esc_attr($tax_name) . ']" ';
+    echo 'id="taxonomy-prompt-' . esc_attr($tax_name) . '" rows="4" cols="50" class="widefat">';
+    echo esc_textarea($prompt);
+    echo '</textarea>';
+    echo '<p class="description">Leave blank to use the default prompt. This prompt will be used specifically for ' . esc_html($tax_label) . '.</p>';
+    echo '</div>';
     echo '</div>';
 }
 
@@ -1283,10 +1395,29 @@ function openai_tag_suggester_save_tags_ajax() {
 
 // Add this function to get available taxonomies
 function openai_tag_suggester_get_available_taxonomies() {
-    return array(
-        'post_tag' => 'Tags',
-        'hashtag' => 'Hashtags'
-    );
+    // Get all taxonomies that are registered in WordPress
+    $all_taxonomies = get_taxonomies(array('show_ui' => true), 'objects');
+    
+    // Create an array to store the taxonomies
+    $available_taxonomies = array();
+    
+    // Loop through each taxonomy and add it to our array
+    foreach ($all_taxonomies as $taxonomy) {
+        // Skip internal WordPress taxonomies like 'link_category'
+        if ($taxonomy->name === 'link_category') {
+            continue;
+        }
+        
+        // Add the taxonomy to our array with the label as the value
+        $available_taxonomies[$taxonomy->name] = $taxonomy->label;
+    }
+    
+    // If no taxonomies were found, add post_tag as a fallback
+    if (empty($available_taxonomies)) {
+        $available_taxonomies['post_tag'] = 'Tags';
+    }
+    
+    return $available_taxonomies;
 }
 
 // Add sanitization callback for taxonomies
@@ -1600,33 +1731,97 @@ function openai_tag_suggester_admin_styles($hook) {
         'openai-tag_suggester-admin',
         plugins_url('openai-tag-suggester-admin.css', __FILE__),
         array(),
-        '1.0.7'  // Increment version to bust cache
+        '1.1.0'  // Increment version to bust cache
     );
     
     // Add inline styles for taxonomy settings
     if ($hook === 'settings_page_openai-tag-suggester') {
         $custom_css = "
-            .taxonomy-item {
+            /* Taxonomy filter */
+            .taxonomy-filter {
                 margin-bottom: 20px;
+            }
+            
+            #taxonomy-search {
+                padding: 8px;
+                font-size: 14px;
                 border: 1px solid #ddd;
-                padding: 15px;
-                background-color: #f8f8f8;
                 border-radius: 4px;
+                box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
+            }
+            
+            /* Taxonomy groups */
+            .taxonomy-group {
+                margin-bottom: 30px;
+                border: 1px solid #e5e5e5;
+                background-color: #fff;
+                box-shadow: 0 1px 1px rgba(0,0,0,.04);
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            
+            .taxonomy-group h3 {
+                margin: 0;
+                padding: 12px 15px;
+                background-color: #f9f9f9;
+                border-bottom: 1px solid #e5e5e5;
+                font-size: 14px;
+                color: #23282d;
+            }
+            
+            /* Taxonomy items */
+            .taxonomy-item {
+                margin: 0;
+                padding: 15px;
+                background-color: #fff;
+                border-bottom: 1px solid #f1f1f1;
+            }
+            
+            .taxonomy-item:last-child {
+                border-bottom: none;
+            }
+            
+            .taxonomy-item:hover {
+                background-color: #f9f9f9;
             }
             
             .taxonomy-checkbox-label {
-                font-weight: bold;
+                font-weight: 600;
                 font-size: 14px;
                 margin-bottom: 10px;
                 display: block;
+                cursor: pointer;
+            }
+            
+            .taxonomy-name {
+                color: #666;
+                font-weight: normal;
+                font-size: 12px;
             }
             
             .taxonomy-prompt-container {
                 margin-top: 10px;
                 padding-top: 10px;
-                border-top: 1px solid #eee;
+                border-top: 1px solid #f1f1f1;
+                background-color: #f9f9f9;
+                padding: 10px;
+                border-radius: 4px;
             }
             
+            .taxonomy-prompt-container textarea {
+                border: 1px solid #ddd;
+                box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
+                padding: 8px;
+                font-size: 13px;
+            }
+            
+            .taxonomy-prompt-container .description {
+                font-size: 12px;
+                color: #666;
+                margin-top: 5px;
+            }
+            
+            /* Debug info */
             .taxonomy-debug {
                 margin-top: 20px;
                 padding: 10px;
@@ -1635,6 +1830,22 @@ function openai_tag_suggester_admin_styles($hook) {
                 display: none; /* Hide by default, can be shown for debugging */
             }
             
+            /* Responsive adjustments */
+            @media screen and (max-width: 782px) {
+                .taxonomy-item {
+                    padding: 12px 10px;
+                }
+                
+                .taxonomy-checkbox-label {
+                    font-size: 13px;
+                }
+                
+                .taxonomy-prompt-container {
+                    padding: 8px;
+                }
+            }
+            
+            /* Make sure the widefat class works properly */
             .widefat {
                 width: 100%;
                 max-width: 100%;
