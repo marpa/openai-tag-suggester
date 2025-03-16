@@ -154,8 +154,16 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     const suggestedTags = response.data.suggested;
                     const existingTags = response.data.existing;
+                    const usingCustomPrompt = response.data.using_custom_prompt;
+                    const taxonomyLabel = response.data.taxonomy_label;
                     
                     let tagHtml = generateTagCheckboxes(suggestedTags, existingTags);
+                    
+                    // Add information about custom prompt if applicable
+                    if (usingCustomPrompt) {
+                        tagHtml = '<div class="notice notice-info custom-prompt-notice">' +
+                                  '<p>Using custom prompt for ' + taxonomyLabel + '</p></div>' + tagHtml;
+                    }
                     
                     $results.html(tagHtml);
                 } else {

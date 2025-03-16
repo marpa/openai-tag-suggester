@@ -535,3 +535,32 @@ body.block-editor-page .ai-tag-suggester .tag-controls,
 .edit-post-meta-boxes-area .add-selected-tags:focus {
     box-shadow: 0 0 0 1px #ffffff, 0 0 0 3px #005035 !important;
 }
+
+/* Custom prompt notice */
+.ai-tag-suggester .custom-prompt-notice {
+    background-color: #f0f7f4 !important;
+    border-left: 4px solid #005035 !important;
+    padding: 5px 8px !important;
+    margin: 5px 0 10px 0 !important;
+    font-size: 12px !important;
+}
+
+.ai-tag-suggester .custom-prompt-notice p {
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #005035 !important;
+    font-style: italic !important;
+}
+
+/* Star indicator for taxonomies with custom prompts */
+.taxonomy-prompt-info {
+    color: #005035 !important;
+    margin-top: 3px !important;
+    font-style: italic !important;
+}
+
+/* Block Editor specific styles for custom prompt notice */
+.edit-post-meta-boxes-area .ai-tag-suggester .custom-prompt-notice {
+    font-size: 11px !important;
+    padding: 4px 6px !important;
+}
