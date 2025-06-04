@@ -2,8 +2,13 @@
 /*
 Plugin Name: OpenAI Tag Suggester
 Description: Suggests tags for posts using the OpenAI API.
-Version: 1.2.0
+Version: 1.2.1
 Author: Alex Chapin
+GitHub Plugin URI: https://github.com/marpa/openai-tag-suggester.git
+GitHub Branch: main
+Update URI: https://github.com/marpa/openai-tag-suggester.git
+Primary Branch: main
+Release Asset: true
 */
 
 // Add settings page
