@@ -17,15 +17,8 @@ function openai_tag_suggester_menu() {
     add_options_page('OpenAI Tag Suggester Settings', 'OpenAI Tag Suggester', 'manage_options', 'openai-tag-suggester', 'openai_tag_suggester_settings_page');
 }
 
+
 function openai_tag_suggester_settings_page() {
-    // Debug output
-    echo '<div class="debug-info" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">';
-    echo '<h3>Debug Information</h3>';
-    echo '<pre>';
-    echo 'Enabled Taxonomies: ' . print_r(get_option('openai_tag_suggester_enabled_taxonomies'), true) . "\n";
-    echo 'Available Taxonomies: ' . print_r(openai_tag_suggester_get_available_taxonomies(), true) . "\n";
-    echo '</pre>';
-    echo '</div>';
     ?>
     <div class="wrap">
         <h1>OpenAI Tag Suggester Settings</h1>
@@ -89,7 +82,7 @@ function openai_tag_suggester_settings() {
         'type' => 'boolean',
         'default' => false
     ));
-    
+
     // Add settings sections
     add_settings_section(
         'openai_tag_suggester_api_section',
@@ -97,14 +90,14 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester_api_section_callback',
         'openai_tag_suggester'
     );
-    
+
     add_settings_section(
         'openai_tag_suggester_taxonomies_section',
         'Taxonomy Settings',
         'openai_tag_suggester_taxonomies_section_callback',
         'openai_tag_suggester'
     );
-    
+
     add_settings_section(
         'openai_tag_suggester_content_sources_section',
         'Content Sources',
@@ -118,7 +111,7 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester_meta_fields_section_callback',
         'openai_tag_suggester'
     );
-    
+
     // Add settings fields
     add_settings_field(
         'openai_tag_suggester_api_key',
@@ -127,7 +120,7 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester',
         'openai_tag_suggester_api_section'
     );
-    
+
     add_settings_field(
         'openai_tag_suggester_model',
         'OpenAI Model',
@@ -135,7 +128,7 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester',
         'openai_tag_suggester_api_section'
     );
-    
+
     add_settings_field(
         'openai_tag_suggester_system_role',
         'System Role Prompt',
@@ -143,7 +136,7 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester',
         'openai_tag_suggester_api_section'
     );
-    
+
     add_settings_field(
         'openai_tag_suggester_user_role',
         'User Role Prompt',
@@ -151,7 +144,7 @@ function openai_tag_suggester_settings() {
         'openai_tag_suggester',
         'openai_tag_suggester_api_section'
     );
-    
+
     add_settings_field(
         'openai_tag_suggester_enabled_taxonomies',
         'Enabled Taxonomies',
@@ -433,11 +426,11 @@ function openai_tag_suggester_post_types_field() {
             $checked = in_array($post_type->name, $selected_post_types) ? 'checked' : '';
             
             echo '<div class="post-type-item">';
-            echo '<label>';
+    echo '<label>';
             echo '<input type="checkbox" name="openai_tag_suggester_post_types_to_scan[]" value="' . esc_attr($post_type->name) . '" ' . $checked . '>';
             echo ' ' . esc_html($post_type->label) . ' (' . esc_html($post_type->name) . ')';
-            echo '</label>';
-            echo '</div>';
+    echo '</label>';
+    echo '</div>';
         }
         
         echo '</div>';
@@ -625,18 +618,18 @@ function openai_tag_suggester_get_meta_fields() {
                         $debug_log[] = "All meta keys for post {$post->ID}: " . implode(", ", $post_meta_keys);
                     }
                     
-                    foreach ($post_meta_keys as $meta_key) {
-                        // Skip internal meta keys
-                        if (substr($meta_key, 0, 1) === '_') {
+                foreach ($post_meta_keys as $meta_key) {
+                    // Skip internal meta keys
+                    if (substr($meta_key, 0, 1) === '_') {
                             if ($debug_mode) {
                                 $debug_log[] = "Skipping internal meta key: " . $meta_key;
                             }
-                            continue;
-                        }
-                        
-                        // Add to our list if not already there
-                        if (!in_array($meta_key, $meta_keys)) {
-                            $meta_keys[] = $meta_key;
+                        continue;
+                    }
+                    
+                    // Add to our list if not already there
+                    if (!in_array($meta_key, $meta_keys)) {
+                        $meta_keys[] = $meta_key;
                             $debug_log[] = "Added meta key from post {$post->ID}: " . $meta_key;
                         } else {
                             if ($debug_mode) {
@@ -897,20 +890,20 @@ function openai_tag_suggester_content_sources_field() {
         echo '<button type="button" class="button select-none-' . esc_attr($post_type) . '-meta-fields">Select None</button>';
         echo '</div>';
     }
-    
-    // Add JavaScript for select all/none functionality
-    echo '<script>
-        jQuery(document).ready(function($) {
+        
+        // Add JavaScript for select all/none functionality
+        echo '<script>
+            jQuery(document).ready(function($) {
             // General select all/none buttons
-            $(".select-all-meta-fields").on("click", function(e) {
-                e.preventDefault();
-                $(".meta-fields-container input[type=checkbox]").prop("checked", true);
-            });
-            
-            $(".select-none-meta-fields").on("click", function(e) {
-                e.preventDefault();
-                $(".meta-fields-container input[type=checkbox]").prop("checked", false);
-            });
+                $(".select-all-meta-fields").on("click", function(e) {
+                    e.preventDefault();
+                    $(".meta-fields-container input[type=checkbox]").prop("checked", true);
+                });
+                
+                $(".select-none-meta-fields").on("click", function(e) {
+                    e.preventDefault();
+                    $(".meta-fields-container input[type=checkbox]").prop("checked", false);
+                });
             
             // Post type specific select all/none buttons
             ';
@@ -1183,8 +1176,6 @@ function openai_tag_suggester_generate_tags($post_id, $post) {
     // Process and save tags
     if ($tags) {
         wp_set_post_tags($post_id, $tags, true);
-    } else {
-        error_log('No tag suggestions available.');
     }
 }
 
@@ -1219,27 +1210,17 @@ function openai_tag_suggester_process_tags($tags) {
     return $tags;
 }
 
-/**
- * Debug function to log detailed information about the API response
- */
-function openai_tag_suggester_debug_response($content) {
-    error_log('=== DEBUG TAG RESPONSE ===');
-    error_log('Raw content: "' . $content . '"');
-    error_log('Content length: ' . strlen($content));
-    error_log('Contains commas: ' . (strpos($content, ',') !== false ? 'YES' : 'NO'));
-    error_log('Contains newlines: ' . (strpos($content, "\n") !== false ? 'YES' : 'NO'));
-    error_log('Character codes: ' . implode(',', array_map(function($char) {
-        return ord($char);
-    }, str_split($content))));
-    
-    // Test different parsing methods
-    error_log('Split by commas: ' . print_r(explode(',', $content), true));
-    error_log('Split by regex: ' . print_r(preg_split('/,/', $content), true));
-    error_log('Split by preg_match_all: ' . print_r(preg_match_all('/([^,]+)/', $content, $matches) ? $matches[1] : [], true));
-}
 
 function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
     $url = 'https://api.openai.com/v1/chat/completions';
+    
+    if (empty($api_key)) {
+        return [];
+    }
+    
+    if (empty($content)) {
+        return [];
+    }
     
     $cleaned_content = wp_strip_all_tags($content);
     $cleaned_content = substr($cleaned_content, 0, 2000);
@@ -1252,26 +1233,20 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
     // Check for taxonomy-specific prompts
     $taxonomy_prompts = get_option('openai_tag_suggester_taxonomy_prompts', array());
     if (!empty($taxonomy_prompts[$taxonomy])) {
-        error_log("Using custom prompt for taxonomy: $taxonomy");
         $user_role = $taxonomy_prompts[$taxonomy];
         
         // Extract the number of tags requested from the prompt
         $num_tags_requested = 5; // Default to 5
         if (preg_match('/suggest\s+only\s+(\d+)\s+tag/i', $user_role, $matches)) {
             $num_tags_requested = intval($matches[1]);
-            error_log("Detected request for $num_tags_requested tag(s) in custom prompt (only pattern)");
         } elseif (preg_match('/suggest\s+(\d+)\s+tags?/i', $user_role, $matches)) {
             $num_tags_requested = intval($matches[1]);
-            error_log("Detected request for $num_tags_requested tag(s) in custom prompt (standard pattern)");
         } elseif (preg_match('/generate\s+(\d+)\s+tags?/i', $user_role, $matches)) {
             $num_tags_requested = intval($matches[1]);
-            error_log("Detected request for $num_tags_requested tag(s) in custom prompt (generate pattern)");
         } elseif (preg_match('/exactly\s+(\d+)\s+tags?/i', $user_role, $matches)) {
             $num_tags_requested = intval($matches[1]);
-            error_log("Detected request for $num_tags_requested tag(s) in custom prompt (exactly pattern)");
         }
     } else {
-        error_log("No custom prompt found for taxonomy: $taxonomy, using default");
         // Modify default prompt based on taxonomy
         $taxonomy_label = openai_tag_suggester_get_available_taxonomies()[$taxonomy];
         $user_role .= " Generate {$taxonomy_label}.";
@@ -1308,9 +1283,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         )
     );
 
-    // Log the prompt being used
-    error_log("Taxonomy: $taxonomy, Prompt: " . $user_role);
-    error_log("Requesting exactly $num_tags_requested tag(s)");
 
     $args = array(
         'body' => json_encode($data),
@@ -1322,32 +1294,21 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
 
     $response = wp_remote_post($url, $args);
     if (is_wp_error($response)) {
-        error_log('OpenAI API request failed: ' . $response->get_error_message());
         return [];
     }
 
     $body = wp_remote_retrieve_body($response);
     $result = json_decode($body, true);
 
-    error_log('OpenAI API response: ' . print_r($result, true));
-
     if (isset($result['choices'][0]['message']['content'])) {
         $content = $result['choices'][0]['message']['content'];
-        error_log('Raw content from API: ' . $content);
-        
-        // Debug the response
-        openai_tag_suggester_debug_response($content);
         
         // First, check if the content is just a single word or phrase
         if (!preg_match('/[,\n]/', $content) && strlen($content) < 50) {
             // This is likely a single tag - if we only requested one tag, just return it
             if ($num_tags_requested === 1) {
-                error_log('Single tag requested and received: ' . $content);
                 return array(trim($content));
             }
-            
-            // Otherwise, force a retry with more explicit instructions
-            error_log('Content appears to be a single tag, forcing retry');
             
             // Create a new array with this single tag
             $single_tag = array(trim($content));
@@ -1384,11 +1345,9 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
                 $retry_body = wp_remote_retrieve_body($retry_response);
                 $retry_result = json_decode($retry_body, true);
                 
-                error_log('Retry API response: ' . print_r($retry_result, true));
                 
                 if (isset($retry_result['choices'][0]['message']['content'])) {
                     $retry_content = $retry_result['choices'][0]['message']['content'];
-                    error_log('Retry raw content: ' . $retry_content);
                     
                     // Split by commas
                     $retry_tags = array_map('trim', explode(',', $retry_content));
@@ -1400,12 +1359,10 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
                     
                     // If we got more tags than requested, trim the array
                     if (count($retry_tags) > $num_tags_requested) {
-                        error_log('Received more tags than requested, trimming to ' . $num_tags_requested);
                         $retry_tags = array_slice($retry_tags, 0, $num_tags_requested);
                     }
                     
                     if (count($retry_tags) >= 1) {
-                        error_log('Successfully got tags from retry: ' . print_r($retry_tags, true));
                         return array_values($retry_tags);
                     }
                 }
@@ -1417,7 +1374,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         
         // First, try to extract a list if the response contains numbered items
         if (preg_match_all('/\d+\.\s*([^,\n]+)/', $content, $matches)) {
-            error_log('Matched numbered list: ' . print_r($matches[1], true));
             $tags = array_map('trim', $matches[1]);
             // Limit to requested number of tags
             if (count($tags) > $num_tags_requested) {
@@ -1428,7 +1384,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         
         // Next, try to extract items from a bulleted list - but be careful not to match hyphens in words
         if (preg_match_all('/(?:^|\n)\s*[-*•]\s+([^,\n]+)/', $content, $matches)) {
-            error_log('Matched bulleted list: ' . print_r($matches[1], true));
             $tags = array_map('trim', $matches[1]);
             // Limit to requested number of tags
             if (count($tags) > $num_tags_requested) {
@@ -1441,7 +1396,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         if (strpos($content, ',') !== false) {
             // Use a more robust regex to split by commas while preserving hyphenated words
             $tags = preg_split('/,\s*/', $content);
-            error_log('Split by commas with regex: ' . print_r($tags, true));
             
             // Clean up the tags
             $tags = array_map(function($tag) {
@@ -1456,7 +1410,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
             if (count($tags) >= 1) {
                 // Limit to requested number of tags
                 if (count($tags) > $num_tags_requested) {
-                    error_log('Limiting tags to requested number: ' . $num_tags_requested);
                     $tags = array_slice($tags, 0, $num_tags_requested);
                 }
                 return array_values($tags);
@@ -1466,7 +1419,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         // If no commas, try splitting by newlines
         if (strpos($content, "\n") !== false) {
             $tags = array_map('trim', explode("\n", $content));
-            error_log('Split by newlines: ' . print_r($tags, true));
             
             // Filter out empty tags
             $tags = array_filter($tags, function($tag) {
@@ -1484,7 +1436,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         
         // If we get here, we need to try more advanced parsing
         $tags = preg_split('/[,\n]+/', $content);
-        error_log('Split by commas/newlines: ' . print_r($tags, true));
         
         // Clean up the tags
         $tags = array_map(function($tag) {
@@ -1499,18 +1450,15 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         });
         
         $result_tags = array_values($tags);
-        error_log('Final tags: ' . print_r($result_tags, true));
         
         // Limit to requested number of tags
         if (count($result_tags) > $num_tags_requested) {
-            error_log('Final limit of tags to requested number: ' . $num_tags_requested);
             $result_tags = array_slice($result_tags, 0, $num_tags_requested);
         }
         
         // If we still only have one tag, try to split it further
         if (count($result_tags) === 1 && strpos($result_tags[0], ' ') !== false && $num_tags_requested > 1) {
             $single_tag = $result_tags[0];
-            error_log('Attempting to split single tag: ' . $single_tag);
             
             // First, check if it's a sentence or paragraph that needs to be parsed
             if (strlen($single_tag) > 50) {
@@ -1518,7 +1466,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
                 // Try to extract comma-separated values that might be embedded in text
                 if (preg_match_all('/\b([^,.]+(?:\s+[^,.]{1,20}){0,2})[,.]/', $single_tag . ',', $matches)) {
                     $extracted_tags = array_map('trim', $matches[1]);
-                    error_log('Extracted tags from text: ' . print_r($extracted_tags, true));
                     if (count($extracted_tags) > 1) {
                         // Limit to requested number of tags
                         if (count($extracted_tags) > $num_tags_requested) {
@@ -1531,7 +1478,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
                 // Try to find tags in quotes
                 if (preg_match_all('/"([^"]+)"/', $single_tag, $matches)) {
                     $quoted_tags = array_map('trim', $matches[1]);
-                    error_log('Extracted quoted tags: ' . print_r($quoted_tags, true));
                     if (count($quoted_tags) > 1) {
                         // Limit to requested number of tags
                         if (count($quoted_tags) > $num_tags_requested) {
@@ -1546,7 +1492,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
                 foreach ($separators as $separator) {
                     if (strpos($single_tag, $separator) !== false) {
                         $split_tags = array_map('trim', explode($separator, $single_tag));
-                        error_log('Split by separator "' . $separator . '": ' . print_r($split_tags, true));
                         if (count($split_tags) > 1) {
                             // Limit to requested number of tags
                             if (count($split_tags) > $num_tags_requested) {
@@ -1564,7 +1509,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         
         // If we still only have one tag and requested more, make another API call with more explicit instructions
         if (count($result_tags) === 1 && $num_tags_requested > 1) {
-            error_log('Still only one tag, making another API call with more explicit instructions');
             
             // Modify the prompt to be even more explicit
             $user_role = "Generate EXACTLY $num_tags_requested separate tags for this content. Each tag should be 1-3 words maximum. Format as: tag1, tag2, tag3, etc.";
@@ -1598,11 +1542,9 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
                 $retry_body = wp_remote_retrieve_body($retry_response);
                 $retry_result = json_decode($retry_body, true);
                 
-                error_log('Retry API response: ' . print_r($retry_result, true));
                 
                 if (isset($retry_result['choices'][0]['message']['content'])) {
                     $retry_content = $retry_result['choices'][0]['message']['content'];
-                    error_log('Retry raw content: ' . $retry_content);
                     
                     // Split by commas
                     $retry_tags = array_map('trim', explode(',', $retry_content));
@@ -1618,7 +1560,6 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
                     }
                     
                     if (count($retry_tags) >= 1) {
-                        error_log('Successfully got tags from retry: ' . print_r($retry_tags, true));
                         return array_values($retry_tags);
                     }
                 }
@@ -1627,11 +1568,9 @@ function openai_tag_suggester_get_tags($content, $api_key, $taxonomy) {
         
         // Process tags with our helper function
         $result_tags = openai_tag_suggester_process_tags($result_tags);
-        error_log('Processed tags: ' . print_r($result_tags, true));
         
         // Final check to ensure we're returning the requested number of tags
         if (count($result_tags) > $num_tags_requested) {
-            error_log('Final limit of tags to requested number: ' . $num_tags_requested);
             $result_tags = array_slice($result_tags, 0, $num_tags_requested);
         }
         
@@ -1663,8 +1602,6 @@ function openai_tag_suggester_add_meta_box() {
         add_action('admin_footer', 'openai_tag_suggester_adjust_block_editor_width');
     }
     
-    // Debug log
-    error_log('OpenAI Tag Suggester: Meta box added with high priority to side panel');
 }
 
 // Add function to adjust width in Block Editor
@@ -1755,12 +1692,8 @@ function openai_tag_suggester_adjust_block_editor_width() {
 function openai_tag_suggester_meta_box_callback($post) {
     wp_nonce_field('openai_tag_suggester_nonce', 'openai_tag_suggester_nonce');
     
-    // Add debug information
-    error_log('OpenAI Tag Suggester: Meta box callback called for post ID ' . $post->ID);
-    
     // Add a class to identify if we're in Classic Editor
     $editor_class = openai_tag_suggester_is_classic_editor() ? 'classic-editor-mode' : 'block-editor-mode';
-    error_log('OpenAI Tag Suggester: Editor class: ' . $editor_class);
     
     echo '<div id="openai_tag_suggester_container" class="ai-tag-suggester ' . $editor_class . '">';
     
@@ -1770,14 +1703,12 @@ function openai_tag_suggester_meta_box_callback($post) {
     // Taxonomy selector
     $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
     $taxonomy_prompts = get_option('openai_tag_suggester_taxonomy_prompts', array());
-    error_log('OpenAI Tag Suggester: Enabled taxonomies: ' . print_r($enabled_taxonomies, true));
     
     echo '<div class="taxonomy-selector" style="margin-bottom: 10px;">';
     echo '<label for="openai_tag_suggester_taxonomy" class="howto">Select taxonomy:</label>';
     echo '<select id="openai_tag_suggester_taxonomy" name="openai_tag_suggester_taxonomy" class="widefat">';
     
     $available_taxonomies = openai_tag_suggester_get_available_taxonomies();
-    error_log('OpenAI Tag Suggester: Available taxonomies: ' . print_r($available_taxonomies, true));
     
     foreach ($available_taxonomies as $tax_name => $tax_label) {
         if (in_array($tax_name, $enabled_taxonomies)) {
@@ -2055,10 +1986,6 @@ function openai_tag_suggester_generate_tags_ajax() {
     
     // Verify nonce
     check_ajax_referer('openai_tag_suggester_nonce', 'nonce');
-
-    // Debug logging (to file, not output)
-    error_log('=== Tag Suggester AJAX Request ===');
-    error_log('POST data: ' . print_r($_POST, true));
     
     if (!isset($_POST['taxonomy'])) {
         wp_send_json_error('No taxonomy specified in request');
@@ -2067,9 +1994,6 @@ function openai_tag_suggester_generate_tags_ajax() {
 
     $taxonomy = sanitize_text_field($_POST['taxonomy']);
     $post_id = intval($_POST['post_id']);
-    
-    error_log('Processing request for taxonomy: ' . $taxonomy);
-    error_log('Post ID: ' . $post_id);
     
     // Validate taxonomy
     $enabled_taxonomies = get_option('openai_tag_suggester_enabled_taxonomies', array('post_tag'));
@@ -2080,7 +2004,6 @@ function openai_tag_suggester_generate_tags_ajax() {
 
     // Get content sources from settings
     $content_sources = get_option('openai_tag_suggester_content_sources', array('post_content'));
-    error_log('Content sources: ' . print_r($content_sources, true));
     
     // Initialize combined content
     $combined_content = '';
@@ -2099,11 +2022,9 @@ function openai_tag_suggester_generate_tags_ajax() {
             if (isset($_POST['content']) && !empty($_POST['content'])) {
                 // Use content sent from the client (useful for unsaved changes)
                 $post_content = wp_kses_post($_POST['content']);
-                error_log('Using content from request (' . strlen($post_content) . ' chars)');
             } else {
                 // Fall back to getting content from the database
                 $post_content = $post->post_content;
-                error_log('Using content from database (' . strlen($post_content) . ' chars)');
             }
             
             // Add to combined content with a heading
@@ -2143,12 +2064,10 @@ function openai_tag_suggester_generate_tags_ajax() {
                 $max_meta_length = 5000; // 5000 characters max per meta field
                 if (strlen($meta_value) > $max_meta_length) {
                     $meta_value = substr($meta_value, 0, $max_meta_length) . '... [truncated]';
-                    error_log('Meta field ' . $source . ' truncated from ' . strlen($meta_value) . ' to ' . $max_meta_length . ' chars');
                 }
                 
                 // Add to combined content with a heading
                 $combined_content .= "META FIELD (" . $source . "):\n" . $meta_value . "\n\n";
-                error_log('Added meta field ' . $source . ' (' . strlen($meta_value) . ' chars)');
             }
         }
     }
@@ -2178,6 +2097,7 @@ function openai_tag_suggester_generate_tags_ajax() {
         }
         
         $tags = openai_tag_suggester_get_tags($combined_content, $api_key, $taxonomy);
+        
         if ($tags) {
             wp_send_json_success(array(
                 'suggested' => $tags,
@@ -2305,27 +2225,20 @@ function openai_tag_suggester_get_available_taxonomies() {
 
 // Add sanitization callback for taxonomies
 function openai_tag_suggester_sanitize_taxonomies($taxonomies) {
-    error_log('Sanitizing taxonomies: ' . print_r($taxonomies, true));
-    
     if (!is_array($taxonomies)) {
-        error_log('Taxonomies is not an array, defaulting to post_tag');
         return array('post_tag');
     }
     
     // Get available taxonomies
     $available_taxonomies = array_keys(openai_tag_suggester_get_available_taxonomies());
-    error_log('Available taxonomies: ' . print_r($available_taxonomies, true));
     
     // Filter out any invalid taxonomies
     $taxonomies = array_filter($taxonomies, function($tax) use ($available_taxonomies) {
         return in_array($tax, $available_taxonomies);
     });
     
-    error_log('Filtered taxonomies: ' . print_r($taxonomies, true));
-    
     // Ensure we have at least post_tag
     if (empty($taxonomies)) {
-        error_log('No valid taxonomies, defaulting to post_tag');
         return array('post_tag');
     }
     
@@ -2334,10 +2247,7 @@ function openai_tag_suggester_sanitize_taxonomies($taxonomies) {
 
 // Add sanitization callback for taxonomy prompts
 function openai_tag_suggester_sanitize_taxonomy_prompts($prompts) {
-    error_log('Sanitizing taxonomy prompts: ' . print_r($prompts, true));
-    
     if (!is_array($prompts)) {
-        error_log('Taxonomy prompts is not an array, defaulting to empty array');
         return array();
     }
     
@@ -2351,8 +2261,6 @@ function openai_tag_suggester_sanitize_taxonomy_prompts($prompts) {
             $sanitized_prompts[$taxonomy] = sanitize_textarea_field($prompt);
         }
     }
-    
-    error_log('Sanitized taxonomy prompts: ' . print_r($sanitized_prompts, true));
     
     return $sanitized_prompts;
 }
@@ -2844,8 +2752,6 @@ function openai_tag_suggester_scan_meta_fields_ajax() {
         $original_debug_mode = get_option('openai_tag_suggester_meta_debug_mode', false);
         update_option('openai_tag_suggester_meta_debug_mode', true);
         
-        // Log start of scan
-        error_log('Starting meta fields scan via AJAX');
         
         // Perform the scan
         $meta_fields = openai_tag_suggester_get_meta_fields();
@@ -2856,8 +2762,6 @@ function openai_tag_suggester_scan_meta_fields_ajax() {
         // Get the debug log
         $debug_log = get_option('openai_tag_suggester_meta_debug_log', array());
         
-        // Log completion
-        error_log('Meta fields scan completed via AJAX, found ' . count($meta_fields) . ' fields');
         
         // Get any output that might have been generated
         $unexpected_output = ob_get_clean();
@@ -2874,8 +2778,6 @@ function openai_tag_suggester_scan_meta_fields_ajax() {
         // Get any output that might have been generated
         $unexpected_output = ob_get_clean();
         
-        // Log the error
-        error_log('Error in meta fields scan: ' . $e->getMessage());
         
         // Send error response
         wp_send_json_error(array(
